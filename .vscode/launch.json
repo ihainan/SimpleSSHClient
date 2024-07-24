@@ -1,0 +1,23 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "scala",
+            "request": "launch",
+            "name": "Test DiffieHellmanGroup14PacketSpec",
+            "testClass": "me.ihainan.DiffieHellmanGroup14PacketSpec"
+        },
+        {
+            "type": "scala",
+            "request": "launch",
+            "name": "SimpleSSHClient",
+            "mainClass": "me.ihainan.SimpleSSHClient",
+            "args": [],
+            "jvmOptions": [],
+            "env": {}
+        }
+    ]
+}
