@@ -41,7 +41,7 @@ class AlgorithmNegotiationPacket(
 
   def generatePacket(): SSHBuffer = {
     val payloadBuffer = generatePayload()
-    SSHSession.setIC(payloadBuffer.getData)
+    SSHSession.setIC(payloadBuffer.getData) // IC contains the SSH_MSG_KEXINIT
     val buffer = payloadBuffer.wrapWithPadding()
     buffer
   }
@@ -51,7 +51,7 @@ object AlgorithmNegotiationPacket {
   private val SSH_MSG_KEXINIT = 0x14.toByte
   val cookie = Array(0x6f, 0x34, 0x3a, 0xdc, 0x69, 0x15, 0x84, 0x4a, 0x9d,
     0x84, 0x2d, 0x36, 0x4c, 0x9c, 0xee, 0xcb).map(_.toByte)
-  val keyExchangeAlgorithms = "diffie-hellman-group14-sha256"
+  val keyExchangeAlgorithms = "diffie-hellman-group14-sha256,ext-info-c,kex-strict-c-v00@openssh.com"
   val serverHostKeyAlgorithms = "rsa-sha2-512"
   val encryptionAlgorithmsClientToServer = "aes256-ctr"
   val encryptionAlgorithmsServerToClient = "aes256-ctr"
@@ -100,7 +100,7 @@ object AlgorithmNegotiationPacket {
     val reader = streamReader.reader
     val packetLength = streamReader.packetLength
     val paddingLength = reader.getByte()
-    val payloadBytes = reader.getByteArray(packetLength - paddingLength - 5)
+    val payloadBytes = reader.getByteArray(packetLength - paddingLength - 1)
     val payloadReader = new SSHBufferReader(payloadBytes)
 
     // Save into SSHSession

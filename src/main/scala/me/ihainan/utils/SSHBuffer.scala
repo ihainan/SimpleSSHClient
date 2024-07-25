@@ -31,6 +31,11 @@ class SSHBuffer {
     buffer.appendAll(bytes)
   }
 
+  def putByteArrayWithLength(bytes: Array[Byte]): Unit = {
+    putInt(bytes.length)
+    buffer.appendAll(bytes)
+  }
+
   def putMPInt(bytes: Array[Byte]): Unit = {
     val len = bytes.length
     if ((bytes.head & 0x80) != 0) {
@@ -113,6 +118,8 @@ class SSHStreamBufferReader(in: InputStream) {
 class SSHBufferReader(buffer: Array[Byte]) {
   var index = 0
 
+  def getData() = buffer.toArray
+
   def getByte(): Byte = {
     val num = buffer(index)
     index += 1
@@ -130,7 +137,10 @@ class SSHBufferReader(buffer: Array[Byte]) {
   }
 
   def getString(): String = {
-    val len = getInt()
+    var len = getInt()
+    if (len < 0 || len > 256 * 1024) {
+      len = 256 * 1024
+    }
     new String(getByteArray(len))
   }
 

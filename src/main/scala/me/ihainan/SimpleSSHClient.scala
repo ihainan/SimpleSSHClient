@@ -18,7 +18,7 @@ class SimpleSSHClient(
   private val in: InputStream = socket.getInputStream
   private val out: OutputStream = socket.getOutputStream
 
-  private val SSH_CLIENT_VERSON = "SSH-2.0-0penSSH_9.6"
+  private val SSH_CLIENT_VERSON = "SSH-2.0-JSCH_0.2.18"
 
   private val clientAlrithms = AlgorithmNegotiationPacket.getClientAlgorithms()
   private var serverAlgorithms: AlgorithmNegotiationPacket = _

@@ -10,6 +10,7 @@ import com.ibm.j9ddr.vm29.pointer.generated.messagePointer
 import java.math.BigInteger
 import me.ihainan.SSHSession
 import me.ihainan.algorithms.RSAAlgorithm
+import me.ihainan.algorithms.SSHSignatureVerifier
 
 object DiffieHellmanGroup14Packet {
   private val DH_EXCHANGE_CODE = 0x1e.toByte
@@ -29,6 +30,8 @@ object DiffieHellmanGroup14Packet {
   }
 
   def readServerPublibKeyFromInputStream(in: InputStream): Unit = {
+    // REF: https://www.rfc-editor.org/rfc/rfc4253#page-22
+
     // parse packet
     val streamReader = new SSHStreamBufferReader(in)
     val reader = streamReader.reader
@@ -38,26 +41,34 @@ object DiffieHellmanGroup14Packet {
     val payloadReader = new SSHBufferReader(payloadBytes)
 
     // read payload
-    val messageCode = payloadReader.getByte()
+    val messageCode = payloadReader.getByte() // SSH_MSG_KEXDH_REPLY
     println(s"  packet message code = $messageCode")
-    val hostKeyLength = payloadReader.getInt()
-    val hostKeyReader = new SSHBufferReader(payloadReader.getByteArray(hostKeyLength))
+
+    // server public host key and certificates (K_S)
+    val ks = payloadReader.getByteArray()
+    val hostKeyReader = new SSHBufferReader(ks)
     val hostKeyType = hostKeyReader.getString()
     val serverRSAE = new BigInteger(hostKeyReader.getMPInt())
     val serverRSAN = new BigInteger(hostKeyReader.getMPInt())
+
+    // f
     val serverDHF = payloadReader.getMPInt()
+
+    // signature of H
     val signatureBytes = payloadReader.getByteArray()
 
     // Generate server's public key
     val serverRSAPublicKey = RSAAlgorithm.generateRSAPublicKey(serverRSAE, serverRSAN)
+    SSHSession.setServerRSAPublicKey(serverRSAPublicKey)
 
     // TODO: validate server's public key
-    println("  " + RSAAlgorithm.encodeRSAPublicKey(serverRSAPublicKey))
+    println("  " + RSAAlgorithm.convertToOpenSSHFormat(serverRSAPublicKey))
 
     // Save into SSHSession
-    SSHSession.setF(new BigInteger(serverDHF))
+    SSHSession.setF(serverDHF)
+    SSHSession.setKS(ks)
 
     // validate the signature
-    // keyExchangeAlgorithm.verifySignature(clientVersion, serverVersion, ic, is, sign)
+    SSHSignatureVerifier.verifySignature(signatureBytes)
   }
 }
