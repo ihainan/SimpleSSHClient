@@ -16,7 +16,7 @@ class SimpleSSHClient(
   private val out: OutputStream = socket.getOutputStream
 
   private val SSH_CLIENT_VERSON = "SSH-2.0-0penSSH_9.6"
-  private var serverClientVersion: String = _
+  private var serverSSHVersion: String = _
 
   private val clientAlrithms = AlgorithmNegotiationPacket.getClientAlgorithms()
   private var serverAlgorithms: AlgorithmNegotiationPacket = _
@@ -48,31 +48,36 @@ class SimpleSSHClient(
     // receive server's public to generate shared secret
     serverKEX()
 
-    // TODO: client sends the NEW KEYS packet to the server
-    // TODO: client sends the encrypted data to the server
+    // client sends/receives the NEW KEYS packet to/from the server
+    sendNewKey()
+    receiveNewKey()
+    
+    // auth using public key
+    
   }
 
   def sendClientVersion(): Unit = {
-    println(s"Sending client version $SSH_CLIENT_VERSON to the server")
+    println(s"Sending client version $SSH_CLIENT_VERSON to the server...")
     val clientVersionBytes = SSH_CLIENT_VERSON.getBytes()
     out.write(clientVersionBytes)
     out.write(0x0d)
     out.write(0x0a)
     out.flush
-    println("Version sent")
+    println("  Client version sent")
   }
 
   def receiveServerVersion(): Unit = {
+    println(s"Receving client version $SSH_CLIENT_VERSON to the server...")
     val buffer = collection.mutable.ArrayBuffer.empty[Byte]
     var lastByte: Int = -1
     var currentByte: Int = -1
-    while (serverClientVersion == null && {
+    while (serverSSHVersion == null && {
         currentByte = in.read; currentByte != -1
       }) {
       if (lastByte == 0x0d && currentByte == 0x0a) {
         buffer.trimEnd(1)
-        serverClientVersion = new String(buffer.toArray)
-        println(s"serverClientVersion = $serverClientVersion")
+        serverSSHVersion = new String(buffer.toArray)
+        println(s"  serverClientVersion = $serverSSHVersion")
       }
       buffer += currentByte.toByte
       lastByte = currentByte
@@ -80,26 +85,46 @@ class SimpleSSHClient(
   }
 
   private def sendClientAlgorithms(): Unit = {
+    println("SSH_MSG_KEXINIT(client -> server)...")
     out.write(clientAlrithms.toFullBytes)
   }
 
   private def receiveServerAlgorithms(): Unit = {
+    println("SSH_MSG_KEXINIT(server -> client)...")
     serverAlgorithms = AlgorithmNegotiationPacket.readAlgorithmsFromInputStream(in)
-
-    println("Server algorithms: ")
-    println(serverAlgorithms)
+    // println("Server algorithms: ")
+    // println(serverAlgorithms)
   }
 
   private def clientKEX(): Unit = {
     val clientKEXPacket = DiffieHellmanGroup14Packet.generateDHInitPacket()
     out.write(clientKEXPacket)
     out.flush()
-    println("clientKEX sent")
+    println("  clientKEX sent")
   }
 
   private def serverKEX(): Unit = {
-    // DiffieHellmanGroup14Packet.keyExchangeAlgorithm.testDH()
-    DiffieHellmanGroup14Packet.parseServerPublicKey(in, SSH_CLIENT_VERSON, serverClientVersion)
+    DiffieHellmanGroup14Packet.parseServerPublicKey(
+      in, 
+      SSH_CLIENT_VERSON, 
+      serverSSHVersion,
+      clientAlrithms.getIC(),
+      AlgorithmNegotiationPacket.getIS())
+  }
+
+  private def sendNewKey(): Unit = {
+    println("Sending NEW_KEY...")
+    out.write(NewKeyPacket.generateNewKey())
+    out.flush()
+  }
+
+  private def receiveNewKey(): Unit = {
+    println("Receving NEW_KEY...")
+    NewKeyPacket.receiveNewKey(in)
+  }
+
+  private def sendAuthRequest(): Unit = {
+    println("Sending auth request...")
   }
 
   def closeConnection(): Unit = {

@@ -93,6 +93,20 @@ object SSHUtils {
     // packet_length = payload_length + padding_length + 1 (padding_length byte)
     payloadLength + paddingLength + 1
   }
+
+  private def readString(buffer: ByteBuffer): String = {
+    val length = buffer.getInt
+    val bytes = new Array[Byte](length)
+    buffer.get(bytes)
+    new String(bytes, "UTF-8")
+  }
+
+  private def readMPInt(buffer: ByteBuffer): BigInteger = {
+    val length = buffer.getInt
+    val bytes = new Array[Byte](length)
+    buffer.get(bytes)
+    new BigInteger(1, bytes)
+  }
 }
 
 class StringReader(bytes: Array[Byte]) {

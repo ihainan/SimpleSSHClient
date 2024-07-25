@@ -35,8 +35,8 @@ object DiffieHellmanGroup14Packet {
     val paddingLength = SSHUtils.calculatePaddingLength(payloadLength)
     val packetLength = payloadLength + paddingLength + 1
     val paddings = (0 until paddingLength).map(_ => 0.toByte)
-    println(
-      s"payloadLength = $payloadLength, paddingLength = $paddingLength, packetLength = $packetLength")
+    // println(
+    //   s"payloadLength = $payloadLength, paddingLength = $paddingLength, packetLength = $packetLength")
 
     // packet length + padding length
     bytes.appendAll(SSHUtils.intToBytes(packetLength))
@@ -50,7 +50,12 @@ object DiffieHellmanGroup14Packet {
     bytes.toArray
   }
 
-  def parseServerPublicKey(in: InputStream, clientVersion: String, serverVersion: String): Unit = {
+  def parseServerPublicKey(
+    in: InputStream, 
+    clientVersion: String, 
+    serverVersion: String,
+    ic: Array[Byte],
+    is: Array[Byte]): Unit = {
     val packetLength = SSHUtils.readInt(in)
     val paddingLength = in.read()
     val serverKexPayload = SSHUtils.readByteArray(in, packetLength - 1)
@@ -63,15 +68,14 @@ object DiffieHellmanGroup14Packet {
 
     // read kex host key info to get the RSA public key
     val hostKeyLength = ByteBuffer.wrap(serverKexPayload.slice(1, 5)).getInt
-    println(s"hostKeyLength = $hostKeyLength")
     val kexHostInfo = new KexHostKeyReader(serverKexPayload.slice(5, 5 + hostKeyLength)).read()
-    println(s"kexHostInfo = $kexHostInfo")
     keyExchangeAlgorithm.setserverRSAPublicKey(kexHostInfo.e, kexHostInfo.n)
 
     // read server's DH public key
     val serverFAndSignBytes = serverKexPayload.slice(5 + hostKeyLength, serverKexPayload.length)
     val serverPubKeyLength = ByteBuffer.wrap(serverFAndSignBytes.slice(0, 4)).getInt
     val serverPublicKeyBytes = serverFAndSignBytes.slice(4, 4 + serverPubKeyLength)
+    keyExchangeAlgorithm.setFBytes(serverPublicKeyBytes)
     keyExchangeAlgorithm.setServerDHPublicKey(serverPublicKeyBytes)
 
     // read signature
@@ -83,6 +87,6 @@ object DiffieHellmanGroup14Packet {
     keyExchangeAlgorithm.generateSharedSecret()
 
     // validate the signature
-    // keyExchangeAlgorithm.validateSignature(sign, clientVersion, serverVersion)
+    // keyExchangeAlgorithm.verifySignature(clientVersion, serverVersion, ic, is, sign)
   }
 }

@@ -22,7 +22,9 @@ class AlgorithmNegotiationPacket(
   private val SSH_MSG_KEXINIT = 0x14.toByte
   private val random = new Random()
   private val reserved = SSHUtils.intToBytes(0)
-  private var payloadByteArray: Array[Byte] = _
+  private var I_C: Array[Byte] = _
+
+  def getIC(): Array[Byte] = I_C
 
   override def toString(): String = {
     val sb = new StringBuilder()
@@ -79,29 +81,32 @@ class AlgorithmNegotiationPacket(
     // reserved
     bytes.appendAll(reserved)
 
+    // return
     bytes.toArray
   }
 
   def toFullBytes(): Array[Byte] = {
     val bytes = collection.mutable.ArrayBuffer.empty[Byte]
 
+    // store bytes for signature validation
+    I_C = getPayloadByteArray()
+
     // payload and padding
-    payloadByteArray = getPayloadByteArray()
-    val payloadLength = payloadByteArray.length
+    val payloadLength = I_C.length
     val paddingLength = SSHUtils.calculatePaddingLength(payloadLength, blockSize = 8)
     val paddings = (0 until paddingLength).map(_ => 0.toByte)
 
     // packet length
     val packetLength = payloadLength + paddingLength + 1
     bytes.appendAll(SSHUtils.intToBytes(packetLength))
-    println(
-      s"payloadLength = $payloadLength, paddingLength = $paddingLength, packetLength = $packetLength")
+    // println(
+    //   s"payloadLength = $payloadLength, paddingLength = $paddingLength, packetLength = $packetLength")
 
     // padding length
     bytes += paddingLength.toByte
 
     // payload
-    bytes.appendAll(payloadByteArray)
+    bytes.appendAll(I_C)
 
     // paddings
     bytes.appendAll(paddings)
@@ -115,7 +120,7 @@ object AlgorithmNegotiationPacket {
   val cookie = Array(0x6f, 0x34, 0x3a, 0xdc, 0x69, 0x15, 0x84, 0x4a, 0x9d,
     0x84, 0x2d, 0x36, 0x4c, 0x9c, 0xee, 0xcb).map(_.toByte)
   val keyExchangeAlgorithms =
-    "diffie-hellman-group14-sha256,ext-info-c,kex-strict-c-v00@openssh.com"
+    "diffie-hellman-group14-sha256"
   val serverHostKeyAlgorithms =
     "rsa-sha2-512"
   val encryptionAlgorithmsClientToServer =
@@ -126,11 +131,14 @@ object AlgorithmNegotiationPacket {
     "hmac-sha2-256"
   val macAlgorithmsServerToClient =
     "hmac-sha2-256"
-  val compressionAlgorithmsClientToServer = "none,zlib@openssh.com,zlib"
-  val compressionAlgorithmsServerToClient = "none,zlib@openssh.com,zlib"
+  val compressionAlgorithmsClientToServer = "none"
+  val compressionAlgorithmsServerToClient = "none"
   val languagesClientToServer = ""
   val languagesServerToClient = ""
   val firstKexPacketFollows = 0.toByte
+  var I_S: Array[Byte] = _
+
+  def getIS(): Array[Byte] = I_S
 
   def getClientAlgorithms(): AlgorithmNegotiationPacket = {
     val clientAlgorithms = new AlgorithmNegotiationPacket(
@@ -154,8 +162,11 @@ object AlgorithmNegotiationPacket {
     val packetLength = SSHUtils.readInt(in)
     val paddingLength = in.read()
     val payloadLength = packetLength - 1
-    val payload = SSHUtils.readByteArray(in, payloadLength)
+    val payloadAndPadding = SSHUtils.readByteArray(in, payloadLength)
+    val payload = payloadAndPadding.slice(0, payloadLength - paddingLength)
+    I_S = payload
     val messageCode = payload.slice(0, 1)
+    
     val cookie = payload.slice(1, 17)
     // println(s"Message code = ${SSHUtils.formatByteArray(messageCode)}")
     // println(s"cookie = ${SSHUtils.formatByteArray(cookie)}")

@@ -9,8 +9,32 @@ import java.io.ByteArrayOutputStream
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
 import java.security._
+import java.io.ByteArrayInputStream
+import java.io.DataInputStream
 
 object SSHSignatureVerifier {
+
+  def decodeSSHSignature(encodedSignature: Array[Byte]): Array[Byte] = {
+    val bis = new ByteArrayInputStream(encodedSignature)
+    val dis = new DataInputStream(bis)
+
+    // 读取算法标识符 "rsa-sha2-512"
+    val algorithmLength = dis.readInt()
+    val algorithmBytes = new Array[Byte](algorithmLength)
+    dis.readFully(algorithmBytes)
+    val algorithm = new String(algorithmBytes, StandardCharsets.UTF_8)
+
+    if (algorithm != "rsa-sha2-512") {
+      throw new IllegalArgumentException(s"Unexpected signature algorithm: $algorithm")
+    }
+
+    // 读取实际的签名数据
+    val signatureLength = dis.readInt()
+    val signature = new Array[Byte](signatureLength)
+    dis.readFully(signature)
+
+    signature
+  }
 
   def verifySignature(
       clientVersion: String,
@@ -21,22 +45,27 @@ object SSHSignatureVerifier {
       e: BigInteger,
       f: BigInteger,
       k: BigInteger,
-      signature: Array[Byte]): Boolean = {
+      encodedSignature: Array[Byte]): Unit = {
 
     // 1. 构建要签名的数据
     val dataToSign = buildDataToSign(clientVersion, serverVersion, clientKexInit,
       serverKexInit, serverHostKey, e, f, k)
 
     // 2. 计算哈希
-    val sha256 = MessageDigest.getInstance("SHA-256")
-    val hash = sha256.digest(dataToSign)
+    val sha512 = MessageDigest.getInstance("SHA-512")
+    val hash = sha512.digest(dataToSign)
 
-    // 3. 验证签名
-    val sig = Signature.getInstance("SHA256withRSA")
+    // 3. 解码 SSH 签名
+    val decodedSignature = decodeSSHSignature(encodedSignature)
+
+    // 4. 验证签名
+    val sig = Signature.getInstance("SHA512withRSA")
     sig.initVerify(serverHostKey)
     sig.update(hash)
 
-    sig.verify(signature)
+    if (!sig.verify(decodedSignature)) {
+      throw new Exception("Failed to verify the signature")
+    }
   }
 
   private def buildDataToSign(
@@ -51,7 +80,6 @@ object SSHSignatureVerifier {
 
     val baos = new ByteArrayOutputStream()
     try {
-      // 按照SSH协议规定的顺序写入数据
       baos.write(clientVersion.getBytes(StandardCharsets.UTF_8))
       baos.write(serverVersion.getBytes(StandardCharsets.UTF_8))
       writeString(baos, clientKexInit)
