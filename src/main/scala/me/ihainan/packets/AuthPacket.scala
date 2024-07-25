@@ -1,4 +1,4 @@
-package me.ihainan
+package me.ihainan.packets
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.file.Files

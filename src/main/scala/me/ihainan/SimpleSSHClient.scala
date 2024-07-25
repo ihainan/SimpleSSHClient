@@ -4,6 +4,9 @@ import java.net.Socket
 import java.io.InputStream
 import java.io.OutputStream
 import scala.util.Random
+import me.ihainan.utils.SSHBuffer
+import me.ihainan.packets._
+import me.ihainan.utils.SSHFormatter
 
 class SimpleSSHClient(
     val host: String,
@@ -16,10 +19,14 @@ class SimpleSSHClient(
   private val out: OutputStream = socket.getOutputStream
 
   private val SSH_CLIENT_VERSON = "SSH-2.0-0penSSH_9.6"
-  private var serverSSHVersion: String = _
 
   private val clientAlrithms = AlgorithmNegotiationPacket.getClientAlgorithms()
   private var serverAlgorithms: AlgorithmNegotiationPacket = _
+
+  def write(bytes: Array[Byte]): Unit = {
+    out.write(bytes)
+    out.flush()
+  }
 
   def createConnection(): Socket = {
     val socket = new Socket(host, port)
@@ -49,44 +56,47 @@ class SimpleSSHClient(
     serverKEX()
 
     // client sends/receives the NEW KEYS packet to/from the server
-    sendNewKey()
-    receiveNewKey()
-    
+    // sendNewKey()
+    // receiveNewKey()
+
     // auth using public key
-    
+
   }
 
   def sendClientVersion(): Unit = {
-    println(s"Sending client version $SSH_CLIENT_VERSON to the server...")
-    val clientVersionBytes = SSH_CLIENT_VERSON.getBytes()
-    out.write(clientVersionBytes)
-    out.write(0x0d)
-    out.write(0x0a)
-    out.flush
+    println(s"Sending SSH version $SSH_CLIENT_VERSON to the server...")
+    val buffer = new SSHBuffer()
+    buffer.putByteArray(SSH_CLIENT_VERSON.getBytes())
+    buffer.putByteArray(Array(0x0d, 0x0a)) // CR LF
+    println(SSHFormatter.formatByteArray(buffer.getData))
+    write(buffer.getData)
+    SSHSession.setClientVersion(SSH_CLIENT_VERSON)
     println("  Client version sent")
   }
 
   def receiveServerVersion(): Unit = {
-    println(s"Receving client version $SSH_CLIENT_VERSON to the server...")
+    println(s"Receving SSH version $SSH_CLIENT_VERSON from the server...")
     val buffer = collection.mutable.ArrayBuffer.empty[Byte]
     var lastByte: Int = -1
     var currentByte: Int = -1
-    while (serverSSHVersion == null && {
+    var serverVersion: String = null
+    while (serverVersion == null && {
         currentByte = in.read; currentByte != -1
       }) {
       if (lastByte == 0x0d && currentByte == 0x0a) {
         buffer.trimEnd(1)
-        serverSSHVersion = new String(buffer.toArray)
-        println(s"  serverClientVersion = $serverSSHVersion")
+        serverVersion = new String(buffer.toArray)
+        println(s"  serverClientVersion = $serverVersion")
       }
       buffer += currentByte.toByte
       lastByte = currentByte
     }
+    SSHSession.setServerVersion(serverVersion)
   }
 
   private def sendClientAlgorithms(): Unit = {
     println("SSH_MSG_KEXINIT(client -> server)...")
-    out.write(clientAlrithms.toFullBytes)
+    write(clientAlrithms.generatePacket().getData)
   }
 
   private def receiveServerAlgorithms(): Unit = {
@@ -97,25 +107,17 @@ class SimpleSSHClient(
   }
 
   private def clientKEX(): Unit = {
-    val clientKEXPacket = DiffieHellmanGroup14Packet.generateDHInitPacket()
-    out.write(clientKEXPacket)
-    out.flush()
+    write(DiffieHellmanGroup14Packet.generateDHInitPacket().getData)
     println("  clientKEX sent")
   }
 
   private def serverKEX(): Unit = {
-    DiffieHellmanGroup14Packet.parseServerPublicKey(
-      in, 
-      SSH_CLIENT_VERSON, 
-      serverSSHVersion,
-      clientAlrithms.getIC(),
-      AlgorithmNegotiationPacket.getIS())
+    DiffieHellmanGroup14Packet.readServerPublibKeyFromInputStream(in)
   }
 
   private def sendNewKey(): Unit = {
     println("Sending NEW_KEY...")
-    out.write(NewKeyPacket.generateNewKey())
-    out.flush()
+    write(NewKeyPacket.generateNewKey())
   }
 
   private def receiveNewKey(): Unit = {
