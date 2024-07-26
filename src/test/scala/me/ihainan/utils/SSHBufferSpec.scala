@@ -15,7 +15,6 @@ class SSHBufferSpec extends AnyFunSuite {
   test("SSHBuffer") {
     buffer.length shouldBe 34
     val bytes = buffer.getData
-    println(SSHFormatter.formatByteArray(bytes))
     SSHFormatter.formatByteArray(bytes) shouldBe """00 01 02 00 00 00 03 00 00 00 0b 48 65 6c 6c 6f 20 57 6f 72 6c 64 00 00 00 02 04 05 00 00 00 02 00 80"""
 
   }

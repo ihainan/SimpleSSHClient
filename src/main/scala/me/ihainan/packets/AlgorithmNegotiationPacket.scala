@@ -108,7 +108,7 @@ object AlgorithmNegotiationPacket {
 
     // read payload
     val messageCode = payloadReader.getByte()
-    println(s"  packet message code = $messageCode")
+    // println(s"  packet message code = $messageCode")
     val cookie = payloadReader.getByteArray(16)
     val keyExchangeAlgorithms = payloadReader.getString()
     val serverHostKeyAlgorithms = payloadReader.getString()

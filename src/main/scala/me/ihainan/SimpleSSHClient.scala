@@ -64,18 +64,17 @@ class SimpleSSHClient(
   }
 
   def sendClientVersion(): Unit = {
-    println(s"Sending SSH version $SSH_CLIENT_VERSON to the server...")
+    println(s"Sending SSH version to the server...")
+    println(s"  clientSSHVersion = $SSH_CLIENT_VERSON")
     val buffer = new SSHBuffer()
     buffer.putByteArray(SSH_CLIENT_VERSON.getBytes())
     buffer.putByteArray(Array(0x0d, 0x0a)) // CR LF
-    println(SSHFormatter.formatByteArray(buffer.getData))
     write(buffer.getData)
     SSHSession.setClientVersion(SSH_CLIENT_VERSON)
-    println("  Client version sent")
   }
 
   def receiveServerVersion(): Unit = {
-    println(s"Receving SSH version $SSH_CLIENT_VERSON from the server...")
+    println(s"Receving SSH version from the server...")
     val buffer = collection.mutable.ArrayBuffer.empty[Byte]
     var lastByte: Int = -1
     var currentByte: Int = -1
@@ -86,7 +85,7 @@ class SimpleSSHClient(
       if (lastByte == 0x0d && currentByte == 0x0a) {
         buffer.trimEnd(1)
         serverVersion = new String(buffer.toArray)
-        println(s"  serverClientVersion = $serverVersion")
+        println(s"  serverSSHVersion = $serverVersion")
       }
       buffer += currentByte.toByte
       lastByte = currentByte
@@ -108,7 +107,6 @@ class SimpleSSHClient(
 
   private def clientKEX(): Unit = {
     write(DiffieHellmanGroup14Packet.generateDHInitPacket().getData)
-    println("  clientKEX sent")
   }
 
   private def serverKEX(): Unit = {

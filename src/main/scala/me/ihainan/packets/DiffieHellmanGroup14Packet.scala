@@ -42,7 +42,7 @@ object DiffieHellmanGroup14Packet {
 
     // read payload
     val messageCode = payloadReader.getByte() // SSH_MSG_KEXDH_REPLY
-    println(s"  packet message code = $messageCode")
+    // println(s"  packet message code = $messageCode")
 
     // server public host key and certificates (K_S)
     val ks = payloadReader.getByteArray()
@@ -62,7 +62,7 @@ object DiffieHellmanGroup14Packet {
     SSHSession.setServerRSAPublicKey(serverRSAPublicKey)
 
     // TODO: validate server's public key
-    println("  " + RSAAlgorithm.convertToOpenSSHFormat(serverRSAPublicKey))
+    println("  Server's RSA public key: " + RSAAlgorithm.convertToOpenSSHFormat(serverRSAPublicKey))
 
     // Save into SSHSession
     SSHSession.setF(serverDHF)

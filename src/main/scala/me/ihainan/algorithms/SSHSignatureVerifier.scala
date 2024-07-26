@@ -37,19 +37,19 @@ object SSHSignatureVerifier {
     buffer.putMPInt(getK())
     sha.update(buffer.getData, 0, buffer.getData.length)
 
-    // println("getClientVersion = \n" + SSHFormatter.formatByteArray(getClientVersion.getBytes))
-    // println("getServerVersion = \n" + SSHFormatter.formatByteArray(getServerVersion.getBytes))
-    // println("getIC = \n" + SSHFormatter.formatByteArray(getIC()))
-    // println("getIS = \n" + SSHFormatter.formatByteArray(getIS()))
-    // println("getKS = \n" + SSHFormatter.formatByteArray(getKS()))
-    // println("getE = \n" + SSHFormatter.formatByteArray(getE().toByteArray))
-    // println("getF = \n" + SSHFormatter.formatByteArray(getF()))
-    // println("getK = \n" + SSHFormatter.formatByteArray(getK()))
-    // println("buffer = \n" + SSHFormatter.formatByteArray(buffer.getData))
+    // println("  getClientVersion = " + SSHFormatter.formatByteArray(getClientVersion.getBytes))
+    // println("  getServerVersion = " + SSHFormatter.formatByteArray(getServerVersion.getBytes))
+    // println("  getIC = " + SSHFormatter.formatByteArray(getIC()))
+    // println("  getIS = " + SSHFormatter.formatByteArray(getIS()))
+    // println("  getKS = " + SSHFormatter.formatByteArray(getKS()))
+    // println("  getE = " + SSHFormatter.formatByteArray(getE().toByteArray))
+    // println("  getF = " + SSHFormatter.formatByteArray(getF()))
+    // println("  getK = " + SSHFormatter.formatByteArray(getK()))
+    // println("  buffer = " + SSHFormatter.formatByteArray(buffer.getData))
 
     val H = sha.digest()
 
-    println("  H = \n" + SSHFormatter.formatByteArray(H))
+    println("  H = " + SSHFormatter.formatByteArray(H))
 
     val sig = Signature.getInstance("SHA512withRSA")
     sig.initVerify(getServerRSAPublicKey());
