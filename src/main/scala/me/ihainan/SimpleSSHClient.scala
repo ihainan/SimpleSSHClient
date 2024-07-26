@@ -56,11 +56,11 @@ class SimpleSSHClient(
     serverKEX()
 
     // client sends/receives the NEW KEYS packet to/from the server
-    // sendNewKey()
-    // receiveNewKey()
+    sendNewKey()
+    receiveNewKey()
 
-    // auth using public key
-
+    // auth using password
+    sendAuthRequest()
   }
 
   def sendClientVersion(): Unit = {
@@ -115,16 +115,17 @@ class SimpleSSHClient(
 
   private def sendNewKey(): Unit = {
     println("Sending NEW_KEY...")
-    write(NewKeyPacket.generateNewKey())
+    write(NewKeyPacket.generatePacket())
   }
 
   private def receiveNewKey(): Unit = {
     println("Receving NEW_KEY...")
-    NewKeyPacket.receiveNewKey(in)
+    NewKeyPacket.readNewKeyFromInputStream(in)
   }
 
   private def sendAuthRequest(): Unit = {
     println("Sending auth request...")
+    write(AuthPacket.generatePasswordUserAuthPacket("ihainan", "password").getData)
   }
 
   def closeConnection(): Unit = {
@@ -135,8 +136,8 @@ class SimpleSSHClient(
 }
 
 object SimpleSSHClient extends App {
-  // val client = new SimpleSSHClient("localhost", 2222, "user", "password")
-  val client = new SimpleSSHClient("la.ihainan.me", 22, "user", "password")
+  val client = new SimpleSSHClient("localhost", 2222, "user", "password")
+  // val client = new SimpleSSHClient("la.ihainan.me", 22, "user", "password")
   client.connect()
   client.closeConnection()
 }

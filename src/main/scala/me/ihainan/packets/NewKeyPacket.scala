@@ -1,22 +1,27 @@
 package me.ihainan.packets
 
 import java.io.InputStream
+import me.ihainan.utils.SSHBuffer
+import me.ihainan.utils.SSHBufferReader
+import me.ihainan.utils.SSHStreamBufferReader
 
 object NewKeyPacket {
   
   val NEW_KEY = 0x15.toByte
 
-  def generateNewKey(): Array[Byte] = {
-    val bytes = collection.mutable.ArrayBuffer.empty[Byte]
-    // bytes.appendAll(SSHUtils.intToBytes(12))
-    bytes += 10.toByte
-    bytes += NEW_KEY
-    bytes.appendAll((0 until 10).map(_ => 0.toByte))
-    bytes.toArray
+  def generatePacket(): Array[Byte] = {
+    val buffer = new SSHBuffer()
+    buffer.putByte(NEW_KEY)
+    buffer.wrapWithPadding().getData
   }
 
-  def receiveNewKey(in: InputStream): Unit = {
-    // val bytes = SSHUtils.readByteArray(in, 16)
-    // println("  Server's new key: " + SSHUtils.formatByteArray(bytes))
+  def readNewKeyFromInputStream(in: InputStream): Unit = {
+    val reader = new SSHStreamBufferReader(in)
+    val payloadBuffer = reader.reader
+    val paddingLength = payloadBuffer.getByte()
+    val newKeyCode = payloadBuffer.getByte()
+    if (newKeyCode != NEW_KEY) {
+      throw new Exception("The received code is not NEW_KEY")
+    }
   }
 }

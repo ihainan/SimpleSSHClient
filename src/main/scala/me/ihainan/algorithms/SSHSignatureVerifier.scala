@@ -17,6 +17,7 @@ import me.ihainan.SSHSession._
 import me.ihainan.utils.SSHFormatter
 import java.security.spec.RSAPublicKeySpec
 import me.ihainan.utils.SSHBufferReader
+import me.ihainan.SSHSession
 
 object SSHSignatureVerifier {
   // https://github.com/mwiede/jsch/blob/b32935200b0a102a545c2c62a6e1f38fcc78953e/src/main/java/com/jcraft/jsch/DHGN.java#L151
@@ -48,7 +49,7 @@ object SSHSignatureVerifier {
     // println("  buffer = " + SSHFormatter.formatByteArray(buffer.getData))
 
     val H = sha.digest()
-
+    SSHSession.setH(H)
     println("  H = " + SSHFormatter.formatByteArray(H))
 
     val sig = Signature.getInstance("SHA512withRSA")

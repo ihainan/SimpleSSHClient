@@ -51,12 +51,13 @@ object AlgorithmNegotiationPacket {
   private val SSH_MSG_KEXINIT = 0x14.toByte
   val cookie = Array(0x6f, 0x34, 0x3a, 0xdc, 0x69, 0x15, 0x84, 0x4a, 0x9d,
     0x84, 0x2d, 0x36, 0x4c, 0x9c, 0xee, 0xcb).map(_.toByte)
-  val keyExchangeAlgorithms = "diffie-hellman-group14-sha256,ext-info-c,kex-strict-c-v00@openssh.com"
+  val keyExchangeAlgorithms =
+    "diffie-hellman-group14-sha256,ext-info-c,kex-strict-c-v00@openssh.com"
   val serverHostKeyAlgorithms = "rsa-sha2-512"
   val encryptionAlgorithmsClientToServer = "aes256-ctr"
   val encryptionAlgorithmsServerToClient = "aes256-ctr"
-  val macAlgorithmsClientToServer = "hmac-sha2-256"
-  val macAlgorithmsServerToClient = "hmac-sha2-256"
+  val macAlgorithmsClientToServer = "hmac-sha1"
+  val macAlgorithmsServerToClient = "hmac-sha1"
   val compressionAlgorithmsClientToServer = "none"
   val compressionAlgorithmsServerToClient = "none"
   val languagesClientToServer = ""
@@ -107,8 +108,8 @@ object AlgorithmNegotiationPacket {
     SSHSession.setIS(payloadBytes)
 
     // read payload
-    val messageCode = payloadReader.getByte()
-    // println(s"  packet message code = $messageCode")
+    val command = payloadReader.getByte()
+    // println(s"  packet command = $command")
     val cookie = payloadReader.getByteArray(16)
     val keyExchangeAlgorithms = payloadReader.getString()
     val serverHostKeyAlgorithms = payloadReader.getString()

@@ -3,10 +3,13 @@ package me.ihainan.utils
 import java.nio.ByteBuffer
 import java.io.InputStream
 import java.math.BigInteger
+import me.ihainan.algorithms.AES256CTR
+import me.ihainan.algorithms.HMACSHA1
 
 // https://github.com/mwiede/jsch/blob/master/src/main/java/com/jcraft/jsch/Buffer.java
-class SSHBuffer {
+class SSHBuffer(initData: Array[Byte] = Array.empty[Byte]) {
   private val buffer = collection.mutable.ArrayBuffer.empty[Byte]
+  buffer.appendAll(initData)
 
   def putString(str: String): Unit = {
     putInt(str.length())
@@ -79,6 +82,13 @@ class SSHBuffer {
     newBuffer.putByteArray(bytes)
     (0 until paddingLength).foreach(_ => newBuffer.putByte(0.toByte))
     newBuffer
+  }
+
+  def encryptAndAppendMAC(): SSHBuffer = {
+    val packet = wrapWithPadding()
+    val encryptedPacket = AES256CTR.encrypt(packet.getData)
+    val mac = HMACSHA1.generateMAC(encryptedPacket)
+    new SSHBuffer(encryptedPacket ++ mac)
   }
 }
 

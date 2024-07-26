@@ -41,8 +41,8 @@ object DiffieHellmanGroup14Packet {
     val payloadReader = new SSHBufferReader(payloadBytes)
 
     // read payload
-    val messageCode = payloadReader.getByte() // SSH_MSG_KEXDH_REPLY
-    // println(s"  packet message code = $messageCode")
+    val command = payloadReader.getByte() // SSH_MSG_KEXDH_REPLY
+    // println(s"  packet command = $command")
 
     // server public host key and certificates (K_S)
     val ks = payloadReader.getByteArray()
@@ -70,5 +70,8 @@ object DiffieHellmanGroup14Packet {
 
     // validate the signature
     SSHSignatureVerifier.verifySignature(signatureBytes)
+
+    // derive keys and initialize ciphers
+    SSHSession.derivateKeys()
   }
 }
