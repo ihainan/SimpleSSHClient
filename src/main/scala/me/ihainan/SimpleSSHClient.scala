@@ -137,6 +137,7 @@ class SimpleSSHClient(
 }
 
 object SimpleSSHClient extends App {
+  // val client = new SimpleSSHClient("localhost", 2222, "user", "password")
   val client = new SimpleSSHClient("la.ihainan.me", 22, "user", "password")
   client.connect()
   client.closeConnection()
