@@ -7,6 +7,7 @@ import scala.util.Random
 import me.ihainan.utils.SSHBuffer
 import me.ihainan.packets._
 import me.ihainan.utils.SSHFormatter
+import java.nio.channels.Channel
 
 class SimpleSSHClient(
     val host: String,
@@ -69,6 +70,17 @@ class SimpleSSHClient(
     // auth using password
     sendAuthRequest(username, password)
     receivePasswordAuthenticationResponse()
+
+    // create new session
+    val channel = new ChannelPacket()
+    sendSessionChannelOpenRequest(channel)
+    receiveSessionChannelConfirmation(channel)
+    sendChannelRequest(channel, "ls -l /tmp")
+    receiveChannelSuccess(channel)
+    receiveChannelData(channel)
+    // TODO: stderr, SSH_MSG_CHANNEL_EXTENDED_DATA
+    sendCloseChannelRequest(channel)
+    receiveChannelClose(channel)
   }
 
   def sendClientVersion(): Unit = {
@@ -154,6 +166,41 @@ class SimpleSSHClient(
   private def receivePasswordAuthenticationResponse(): Unit = {
     println("Receving auth response...")
     AuthPacket.readPasswordAuthenticationResponse(in)
+  }
+
+  private def sendSessionChannelOpenRequest(channel: ChannelPacket): Unit = {
+    println("Sending session channel open request...")
+    write(channel.generateSessionChannelOpenPacket.getData) 
+  }
+
+  private def receiveSessionChannelConfirmation(channel: ChannelPacket): Unit = {
+    println("Receving session channel confirmation resposne...")
+    channel.receiveChannelOpenConfirmation(in)
+  }
+
+  private def sendChannelRequest(channel: ChannelPacket, cmd: String): Unit = {
+    println("Sending new channel request...")
+    write(channel.generateChannelRequest(cmd).getData)     
+  }
+
+  private def receiveChannelSuccess(channel: ChannelPacket): Unit = {
+    println("Receving channel success resposne...")
+    channel.receiveChannelSuccess(in)
+  }
+
+  private def receiveChannelData(channel: ChannelPacket): Unit = {
+    println("Receving channel success resposne...")
+    channel.receiveData(in)
+  }
+
+  private def sendCloseChannelRequest(channel: ChannelPacket): Unit = {
+    println("Sending channel close request...")
+    write(channel.generateCloseChannelPacket().getData)
+  }
+
+  private def receiveChannelClose(channel: ChannelPacket): Unit = {
+    println("Receving channel close resposne...")
+    channel.receiveCloseChannel(in)
   }
 
   def closeConnection(): Unit = {

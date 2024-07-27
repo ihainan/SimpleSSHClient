@@ -4,6 +4,7 @@ import me.ihainan.utils.SSHBuffer
 import java.io.InputStream
 import me.ihainan.utils.SSHEncryptedStreamBufferReader
 
+// https://www.ietf.org/rfc/rfc4253.txt
 object ServiceRequestPacket {
   private val SSH_MSG_SERVICE_REQUEST = 0x05.toByte
   private val SSH_MSG_SERVICE_ACCEPT = 0x06.toByte
