@@ -83,6 +83,9 @@ class SimpleSSHClient(
       val thread = channel.serverListenerThread()
       thread.start()
       thread.join()
+
+      // close connection
+      closeConnection()
     } finally {
       if (in != null) in.close()
       if (out != null) out.close()
@@ -132,7 +135,11 @@ class SimpleSSHClient(
 
   private def receiveExtInfo(): Unit = {
     logger.info("Receving extra info...")
-    ExtInfoPacket.readExtInfoPacket(in)
+    Thread.sleep(100)
+    while (in.available() != 0) {
+      ExtInfoPacket.readExtInfoPacket(in)
+      Thread.sleep(100)
+    }
   }
 
   private def sendServiceRequest(service: String): Unit = {
@@ -155,10 +162,9 @@ class SimpleSSHClient(
     AuthPacket.readPasswordAuthenticationResponse(in)
   }
 
-  def closeConnection(): Unit = {
-    if (socket != null) {
-      socket.close()
-    }
+  private def closeConnection(): Unit = {
+    logger.info("Closing connection...")
+    write(DisconnectPacket.generateDisconnectPacket().getData)
   }
 }
 
