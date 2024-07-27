@@ -72,10 +72,10 @@ class SSHBuffer(initData: Array[Byte] = Array.empty[Byte]) {
     }
   }
 
-  def wrapWithPadding(): SSHBuffer = {
+  def wrapWithPadding(blockSize: Int = 8): SSHBuffer = {
     val bytes = getData
     val newBuffer = new SSHBuffer()
-    val paddingLength = calculatePaddingLength(bytes.length)
+    val paddingLength = calculatePaddingLength(bytes.length, blockSize)
     val packetLength = bytes.length + paddingLength + 1
     newBuffer.putInt(packetLength)
     newBuffer.putByte(paddingLength.toByte)
@@ -85,7 +85,7 @@ class SSHBuffer(initData: Array[Byte] = Array.empty[Byte]) {
   }
 
   def encryptAndAppendMAC(): SSHBuffer = {
-    val packet = wrapWithPadding()
+    val packet = wrapWithPadding(16) // AES256
     val encryptedPacket = AES256CTR.encrypt(packet.getData)
     val mac = HMACSHA1.generateMAC(packet.getData)
     new SSHBuffer(encryptedPacket ++ mac)

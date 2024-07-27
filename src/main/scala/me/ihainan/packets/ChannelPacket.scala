@@ -67,7 +67,9 @@ class ChannelPacket {
     val payloadBuffer = reader.reader
     val paddingLength = payloadBuffer.getByte()
     val cmd = payloadBuffer.getByte()
-    if (cmd != SSH_MSG_CHANNEL_SUCCESS) {
+    if (cmd == SSH_MSG_CHANNEL_FAILURE) {
+      println("  Failed to execute command, received SSH_MSG_CHANNEL_FAILURE")
+    } else if (cmd != SSH_MSG_CHANNEL_SUCCESS) {
       throw new Exception(s"Unexpected cmd $cmd, expect $SSH_MSG_CHANNEL_SUCCESS")
     }
     val currentRecipientChannel = payloadBuffer.getInt()
