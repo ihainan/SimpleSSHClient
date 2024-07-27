@@ -6,6 +6,7 @@ import java.io.InputStream
 
 // https://www.rfc-editor.org/rfc/rfc4254
 class ChannelPacket {
+  private val SSH_MSG_GLOBAL_REQUEST = 80.toByte
   private val SSH_MSG_CHANNEL_OPEN = 90.toByte
   private val SSH_MSG_CHANNEL_OPEN_CONFIRMATION = 91.toByte
   private val SSH_MSG_CHANNEL_WINDOW_ADJUST = 93.toByte
@@ -39,17 +40,22 @@ class ChannelPacket {
     val paddingLength = payloadBuffer.getByte()
     val cmd = payloadBuffer.getByte()
     if (cmd != SSH_MSG_CHANNEL_OPEN_CONFIRMATION) {
-      throw new Exception(s"Unexpected cmd $cmd, expect $SSH_MSG_CHANNEL_OPEN_CONFIRMATION")
-    }
-    recipientChannel = payloadBuffer.getInt()
-    val senderChannel = payloadBuffer.getInt()
-    initialWindowSize = payloadBuffer.getInt()
-    maxPacketSize = payloadBuffer.getInt()
+      println(s" Unexpected cmd: $cmd...will retry to read SSH_MSG_CHANNEL_OPEN_CONFIRMATION")
+      receiveChannelOpenConfirmation(in)
+    } else {
+      if (cmd != SSH_MSG_CHANNEL_OPEN_CONFIRMATION) {
+        throw new Exception(s"Unexpected cmd $cmd, expect $SSH_MSG_CHANNEL_OPEN_CONFIRMATION")
+      }
+      recipientChannel = payloadBuffer.getInt()
+      val senderChannel = payloadBuffer.getInt()
+      initialWindowSize = payloadBuffer.getInt()
+      maxPacketSize = payloadBuffer.getInt()
 
-    println(s"  recipientChannel = $recipientChannel")
-    println(s"  senderChannel = $senderChannel")
-    println(s"  initialWindowSize = $initialWindowSize")
-    println(s"  maxPacketSize = $maxPacketSize")
+      println(s"  recipientChannel = $recipientChannel")
+      println(s"  senderChannel = $senderChannel")
+      println(s"  initialWindowSize = $initialWindowSize")
+      println(s"  maxPacketSize = $maxPacketSize")
+    }
   }
 
   def generateChannelRequest(cmd: String): SSHBuffer = {
@@ -67,13 +73,18 @@ class ChannelPacket {
     val payloadBuffer = reader.reader
     val paddingLength = payloadBuffer.getByte()
     val cmd = payloadBuffer.getByte()
-    if (cmd == SSH_MSG_CHANNEL_FAILURE) {
-      println("  Failed to execute command, received SSH_MSG_CHANNEL_FAILURE")
-    } else if (cmd != SSH_MSG_CHANNEL_SUCCESS) {
-      throw new Exception(s"Unexpected cmd $cmd, expect $SSH_MSG_CHANNEL_SUCCESS")
+    if (cmd != SSH_MSG_CHANNEL_FAILURE && cmd != SSH_MSG_CHANNEL_SUCCESS) {
+      println(s" Unexpected cmd: $cmd...will continue to wait the SSH_MSG_CHANNEL_FAILURE packet")
+      receiveChannelSuccess(in)
+    } else {
+      if (cmd == SSH_MSG_CHANNEL_FAILURE) {
+        println("  Failed to execute command, received SSH_MSG_CHANNEL_FAILURE")
+      } else if (cmd != SSH_MSG_CHANNEL_SUCCESS) {
+        throw new Exception(s"Unexpected cmd $cmd, expect $SSH_MSG_CHANNEL_SUCCESS")
+      }
+      val currentRecipientChannel = payloadBuffer.getInt()
+      println(s"  currentRecipientChannel = $currentRecipientChannel")
     }
-    val currentRecipientChannel = payloadBuffer.getInt()
-    println(s"  currentRecipientChannel = $currentRecipientChannel")
   }
 
   def receiveData(in: InputStream): Unit = {
@@ -87,7 +98,7 @@ class ChannelPacket {
     val currentRecipientChannel = payloadBuffer.getInt()
     println(s"  currentRecipientChannel = $currentRecipientChannel")
     val data = payloadBuffer.getString()
-    println(s"  response: $data")
+    println(s"  response: \n$data")
   }
 
   def generateCloseChannelPacket(): SSHBuffer = {
@@ -103,10 +114,15 @@ class ChannelPacket {
     val paddingLength = payloadBuffer.getByte()
     val cmd = payloadBuffer.getByte()
     if (cmd != SSH_MSG_CHANNEL_CLOSE) {
-      throw new Exception(s"Unexpected cmd $cmd, expect $SSH_MSG_CHANNEL_CLOSE")
+      println(s" Unexpected cmd: $cmd...will continue to wait the SSH_MSG_CHANNEL_CLOSE packet")
+      receiveCloseChannel(in)
+    } else {
+      if (cmd != SSH_MSG_CHANNEL_CLOSE) {
+        throw new Exception(s"Unexpected cmd $cmd, expect $SSH_MSG_CHANNEL_CLOSE")
+      }
+      val currentRecipientChannel = payloadBuffer.getInt()
+      println(s"  currentRecipientChannel = $currentRecipientChannel")
     }
-    val currentRecipientChannel = payloadBuffer.getInt()
-    println(s"  currentRecipientChannel = $currentRecipientChannel")
   }
 }
 

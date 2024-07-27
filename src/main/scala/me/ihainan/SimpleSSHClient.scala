@@ -75,7 +75,7 @@ class SimpleSSHClient(
     val channel = new ChannelPacket()
     sendSessionChannelOpenRequest(channel)
     receiveSessionChannelConfirmation(channel)
-    sendChannelRequest(channel, "ls -l /tmp")
+    sendChannelRequest(channel, "ls -l /")
     receiveChannelSuccess(channel)
     receiveChannelData(channel)
     // TODO: stderr, SSH_MSG_CHANNEL_EXTENDED_DATA
@@ -211,7 +211,7 @@ class SimpleSSHClient(
 }
 
 object SimpleSSHClient extends App {
-  val client = new SimpleSSHClient("localhost", 2222, "ihainan", "password")
+  val client = new SimpleSSHClient("fyre.ihainan.me", 22, "ihainan", "")
   // val client = new SimpleSSHClient("la.ihainan.me", 22, "user", "password")
   client.connect()
   Thread.sleep(60000)

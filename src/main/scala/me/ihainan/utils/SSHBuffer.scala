@@ -147,6 +147,7 @@ class SSHEncryptedStreamBufferReader(in: InputStream) extends StreamBufferReader
     println("  encryptedData = " + SSHFormatter.formatByteArray(encryptedData))
     val decryptedData = AES256CTR.decrypt(encryptedData)
     println("  decryptedData = " + SSHFormatter.formatByteArray(decryptedData))
+    // println("  decryptedData to String = " + new String(decryptedData))
 
     // read MAC
     val macData = new Array[Byte](MAC_LENGTH)
