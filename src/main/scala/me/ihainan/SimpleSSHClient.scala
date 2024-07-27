@@ -63,7 +63,7 @@ class SimpleSSHClient(
     receiveExtInfo()
 
     // auth using password
-    // sendAuthRequest()
+    sendAuthRequest()
   }
 
   def sendClientVersion(): Unit = {

@@ -88,7 +88,7 @@ class SSHBuffer(initData: Array[Byte] = Array.empty[Byte]) {
     val packet = wrapWithPadding()
     val encryptedPacket = AES256CTR.encrypt(packet.getData)
     val mac = HMACSHA1.generateMAC(encryptedPacket)
-    new SSHBuffer(encryptedPacket ++ mac)
+    new SSHBuffer(packet.getData ++ mac)
   }
 }
 

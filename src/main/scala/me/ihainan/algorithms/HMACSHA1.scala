@@ -47,9 +47,13 @@ class HMACSHA1(key: Array[Byte]) {
 object HMACSHA1 {
   def generateMAC(data: Array[Byte]): Array[Byte] = {
     val hmacClientToServer = SSHSession.getHMACClientToServer()
+    hmacClientToServer.update(SSHSession.getClientSeqNum())
+    
     hmacClientToServer.update(data, 0, data.length)
     val macClientToServer = new Array[Byte](hmacClientToServer.getBlockSize)
     hmacClientToServer.doFinal(macClientToServer, 0)
+    println("  generated MAC = " + SSHFormatter.formatByteArray(macClientToServer))
+    SSHSession.addClientSeqNum()
     macClientToServer
   }
 
