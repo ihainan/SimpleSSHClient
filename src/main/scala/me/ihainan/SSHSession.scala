@@ -8,8 +8,26 @@ import me.ihainan.utils.SSHBuffer
 import me.ihainan.algorithms.AES256CTR
 import javax.crypto.Cipher
 import me.ihainan.algorithms.HMACSHA1
+import me.ihainan.algorithms.SHA256
+import me.ihainan.utils.SSHFormatter
 
 object SSHSession {
+  // Sequence numbers
+  private var _clientSeqNum = 0
+  private var _serverSeqNum = 0
+
+  def addClientSeqNum(): Unit = {
+    _clientSeqNum += 1
+  }
+
+  def addServerSeqNum(): Unit = {
+    _serverSeqNum += 1
+  }
+
+  def getClientSeqNum(): Int = _clientSeqNum
+
+  def getServerSeqNum(): Int = _serverSeqNum
+
   // H = hash(V_C || V_S || I_C || I_S || K_S || e || f || K)
   private var _clientVersion: String = _
   private var _serverVersion: String = _
@@ -104,7 +122,7 @@ object SSHSession {
     buffer.putByteArray(SSHSession.getH())
     buffer.putByte(c.toByte)
     buffer.putByteArray(SSHSession.getSessionID)
-    buffer.getData.toArray
+    SHA256.computHash(buffer.getData).toArray
   }
 
   private var _IVc2s: Array[Byte] = _
@@ -116,7 +134,7 @@ object SSHSession {
 
   private var _aesEncrypt: AES256CTR = _
   private var _aesDecrypt: AES256CTR = _
-  private var _hmacClientToServer: HMACSHA1  = _
+  private var _hmacClientToServer: HMACSHA1 = _
   private var _hmacServerToClient: HMACSHA1 = _
 
   def getAESEncrypt() = _aesEncrypt
@@ -127,6 +145,7 @@ object SSHSession {
 
   def getHMACServerToClient() = _hmacServerToClient
 
+  // https://github.com/apache/mina-sshd/blob/4b30ab065d065a9b85a8b5f65df0d6ad111fae3c/sshd-core/src/main/java/org/apache/sshd/common/session/helpers/AbstractSession.java#L1915
   def derivateKeys(): Unit = {
     println("Derivating keys...")
     _IVc2s = derivateKey('A')
@@ -135,6 +154,13 @@ object SSHSession {
     _Ks2c = derivateKey('D')
     _MACKc2s = derivateKey('E')
     _MACKs2c = derivateKey('F')
+
+    println("  _IVc2s: " + SSHFormatter.formatByteArray(_IVc2s))
+    println("  _IVs2c: " + SSHFormatter.formatByteArray(_IVs2c))
+    println("  _Kc2s: " + SSHFormatter.formatByteArray(_Kc2s))
+    println("  _Ks2c: " + SSHFormatter.formatByteArray(_Ks2c))
+    println("  _MACKc2s: " + SSHFormatter.formatByteArray(_MACKc2s))
+    println("  _MACKs2c: " + SSHFormatter.formatByteArray(_MACKs2c))
 
     _aesEncrypt = new AES256CTR(Cipher.ENCRYPT_MODE, _Kc2s, _IVc2s)
     _aesDecrypt = new AES256CTR(Cipher.DECRYPT_MODE, _Ks2c, _IVs2c)
@@ -148,6 +174,5 @@ object SSHSession {
   // def getKcc2s() = _Kc2s.toArray
 
   // def getMACKc2s() = _MACKc2s.toArray
-
 
 }

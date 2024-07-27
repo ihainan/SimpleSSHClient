@@ -59,8 +59,11 @@ class SimpleSSHClient(
     sendNewKey()
     receiveNewKey()
 
+    // read extra info from the server (optional)
+    receiveExtInfo()
+
     // auth using password
-    sendAuthRequest()
+    // sendAuthRequest()
   }
 
   def sendClientVersion(): Unit = {
@@ -121,6 +124,11 @@ class SimpleSSHClient(
   private def receiveNewKey(): Unit = {
     println("Receving NEW_KEY...")
     NewKeyPacket.readNewKeyFromInputStream(in)
+  }
+
+  def receiveExtInfo(): Unit = {
+    println("Receving extra info...")
+    ExtInfoPacket.readExtInfoPacket(in)
   }
 
   private def sendAuthRequest(): Unit = {

@@ -4,6 +4,7 @@ import javax.crypto.spec.SecretKeySpec
 import javax.crypto.Mac
 import javax.crypto.ShortBufferException
 import me.ihainan.SSHSession
+import me.ihainan.utils.SSHFormatter
 
 // https://github.com/rtyley/jsch/blob/96b0558b66ec8982e708e46b6e5a254a3650d01b/src/com/jcraft/jsch/jce/HMACSHA1.java
 class HMACSHA1(key: Array[Byte]) {
@@ -54,9 +55,12 @@ object HMACSHA1 {
 
   def validateMAC(data: Array[Byte], mac: Array[Byte]): Unit = {
     val hmacVerify = SSHSession.getHMACServerToClient()
+    hmacVerify.update(SSHSession.getServerSeqNum())
+    SSHSession.addServerSeqNum()
     hmacVerify.update(data, 0, data.length)
     val macToVerify = new Array[Byte](hmacVerify.getBlockSize)
     hmacVerify.doFinal(macToVerify, 0)
+    println("  macToVerify = " + SSHFormatter.formatByteArray(macToVerify))
     val valid = mac.sameElements(macToVerify)
     if (!valid) {
       throw new Exception("HMAC validation failed")

@@ -92,8 +92,8 @@ class SSHBuffer(initData: Array[Byte] = Array.empty[Byte]) {
   }
 }
 
-class SSHStreamBufferReader(in: InputStream) {
-  private def readInt(in: InputStream): Int = {
+abstract class StreamBufferReader(in: InputStream) {
+  def readInt(in: InputStream): Int = {
     val bytes = new Array[Byte](4)
     val bytesRead = in.read(bytes)
     if (bytesRead != 4) {
@@ -104,7 +104,7 @@ class SSHStreamBufferReader(in: InputStream) {
     ByteBuffer.wrap(bytes).getInt
   }
 
-  private def readByteArray(in: InputStream, length: Int): Array[Byte] = {
+  def readByteArray(in: InputStream, length: Int): Array[Byte] = {
     val bytes = new Array[Byte](length)
     val bytesRead = in.read(bytes)
     if (bytesRead != length) {
@@ -114,10 +114,58 @@ class SSHStreamBufferReader(in: InputStream) {
     }
     bytes
   }
+}
 
-  val _buffer = new SSHBuffer()
-  val _packetLength = readInt(in)
-  val data = readByteArray(in, packetLength)
+class SSHEncryptedStreamBufferReader(in: InputStream) extends StreamBufferReader(in) {
+  // private val AES_256_BLOCK_SIZE = 16 // AES-256
+  private val MAC_LENGTH = 20 // HMAC-SHA1
+  private val _buffer = new SSHBuffer()
+  private var _packetLength: Int = _
+  def reader = new SSHBufferReader(_buffer.getData)
+
+  def packetLength = _packetLength
+
+  decryptData()
+
+  def decryptData(): Unit = {
+    // parase packet length and padding length
+    val initialBlock = new Array[Byte](5)
+    in.read(initialBlock)
+    println("  initialBlock = " + SSHFormatter.formatByteArray(initialBlock))
+    val decryptedInitialBlock = AES256CTR.decrypt(initialBlock)
+    println("  decryptedInitialBlock = " + SSHFormatter.formatByteArray(decryptedInitialBlock))
+    SSHFormatter.formatByteArray(decryptedInitialBlock)
+    val initBuffer = new SSHBufferReader(decryptedInitialBlock)
+    _packetLength = initBuffer.getInt()
+    val paddingLength = initBuffer.getByte()
+
+    // read encrypted payload + padding
+    val remainingPacketLength = packetLength - 1
+    val encryptedDataLength = packetLength - 1
+    val encryptedData = new Array[Byte](encryptedDataLength)
+    in.read(encryptedData)
+    println("  encryptedData = " + SSHFormatter.formatByteArray(encryptedData))
+    val decryptedData = AES256CTR.decrypt(encryptedData)
+    println("  decryptedData = " + SSHFormatter.formatByteArray(decryptedData))
+
+    // read MAC
+    val macData = new Array[Byte](MAC_LENGTH)
+    in.read(macData)
+    println("  macData = " + SSHFormatter.formatByteArray(macData))
+    HMACSHA1.validateMAC(decryptedInitialBlock ++ decryptedData, macData)
+
+    // set buffer
+    _buffer.putByte(paddingLength)
+    _buffer.putByteArray(decryptedData)
+  }
+
+}
+
+class SSHStreamBufferReader(in: InputStream) extends StreamBufferReader(in) {
+  private val _buffer = new SSHBuffer()
+  private val _packetLength = readInt(in)
+  private val data = readByteArray(in, packetLength)
+
   _buffer.putByteArray(data)
 
   def reader = new SSHBufferReader(_buffer.getData)
