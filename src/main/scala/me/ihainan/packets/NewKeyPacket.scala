@@ -5,6 +5,7 @@ import me.ihainan.utils.SSHBuffer
 import me.ihainan.utils.SSHBufferReader
 import me.ihainan.utils.SSHStreamBufferReader
 
+// https://datatracker.ietf.org/doc/html/rfc4253#section-7.3
 object NewKeyPacket {
   
   val NEW_KEY = 0x15.toByte

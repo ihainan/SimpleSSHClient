@@ -5,7 +5,7 @@ import me.ihainan.utils.SSHEncryptedStreamBufferReader
 import me.ihainan.utils.SSHFormatter
 import org.slf4j.LoggerFactory
 
-// https://tools.ietf.org/html/rfc8308#section-2.4
+// https://datatracker.ietf.org/doc/html/rfc8308
 // https://github.com/apache/mina-sshd/blob/4b30ab065d065a9b85a8b5f65df0d6ad111fae3c/sshd-core/src/main/java/org/apache/sshd/common/session/helpers/AbstractSession.java#L736
 object ExtInfoPacket {
   private val logger = LoggerFactory.getLogger(getClass().getName())
@@ -25,6 +25,5 @@ object ExtInfoPacket {
       val value = payloadBuffer.getString()
       logger.debug(s"  ExtInfoPacket info($i): " + key + " = " + value)
     }
-
   }
 }

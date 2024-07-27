@@ -9,6 +9,7 @@ import me.ihainan.packets._
 import me.ihainan.utils.SSHFormatter
 import java.nio.channels.Channel
 import org.slf4j.LoggerFactory
+import me.ihainan.algorithms.HelloPacket
 
 class SimpleSSHClient(
     val host: String,
@@ -22,10 +23,8 @@ class SimpleSSHClient(
   private var in: InputStream = _
   private var out: OutputStream = _
 
-  private val SSH_CLIENT_VERSON = "SSH-2.0-SimpleSSH_0.0.1"
-
-  private val clientAlrithms = AlgorithmNegotiationPacket.getClientAlgorithms()
-  private var serverAlgorithms: AlgorithmNegotiationPacket = _
+  private val clientAlrithms = KeyExchangePacket.getClientAlgorithms()
+  private var serverAlgorithms: KeyExchangePacket = _
 
   def write(bytes: Array[Byte]): Unit = {
     out.write(bytes)
@@ -93,44 +92,24 @@ class SimpleSSHClient(
 
   def sendClientVersion(): Unit = {
     logger.info(s"Sending SSH version to the server...")
-    logger.info(s"  clientSSHVersion = $SSH_CLIENT_VERSON")
-    val buffer = new SSHBuffer()
-    buffer.putByteArray(SSH_CLIENT_VERSON.getBytes())
-    buffer.putByteArray(Array(0x0d, 0x0a)) // CR LF
-    write(buffer.getData)
-    SSHSession.setClientVersion(SSH_CLIENT_VERSON)
+    write(HelloPacket.generateVersionPacket().getData)
   }
 
   def receiveServerVersion(): Unit = {
     logger.info(s"Receving SSH version from the server...")
-    val buffer = collection.mutable.ArrayBuffer.empty[Byte]
-    var lastByte: Int = -1
-    var currentByte: Int = -1
-    var serverVersion: String = null
-    while (serverVersion == null && {
-        currentByte = in.read; currentByte != -1
-      }) {
-      if (lastByte == 0x0d && currentByte == 0x0a) {
-        buffer.trimEnd(1)
-        serverVersion = new String(buffer.toArray)
-        logger.info(s"  serverSSHVersion = $serverVersion")
-      }
-      buffer += currentByte.toByte
-      lastByte = currentByte
-    }
-    SSHSession.setServerVersion(serverVersion)
+    HelloPacket.receiveServerVersionPacket(in)
   }
 
   private def sendClientAlgorithms(): Unit = {
     logger.info("SSH_MSG_KEXINIT(client -> server)...")
+    logger.info("Client's algorithms: \n{}", clientAlrithms.toString(): Any)
     write(clientAlrithms.generatePacket().getData)
   }
 
   private def receiveServerAlgorithms(): Unit = {
     logger.info("SSH_MSG_KEXINIT(server -> client)...")
-    serverAlgorithms = AlgorithmNegotiationPacket.readAlgorithmsFromInputStream(in)
-    // println("Server algorithms: ")
-    // println(serverAlgorithms)
+    serverAlgorithms = KeyExchangePacket.readAlgorithmsFromInputStream(in)
+    logger.info("server's algorithms: \n{}", serverAlgorithms.toString(): Any)
   }
 
   private def clientKEX(): Unit = {

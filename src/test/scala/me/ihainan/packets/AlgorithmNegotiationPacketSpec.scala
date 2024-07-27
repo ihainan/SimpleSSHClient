@@ -3,13 +3,13 @@ package me.ihainan.packets
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers._
 import java.io.ByteArrayInputStream
-import me.ihainan.packets.AlgorithmNegotiationPacket._
+import me.ihainan.packets.KeyExchangePacket._
 
 class AlgorithmNegotiationPacketSpec extends AnyFunSuite {
-  import AlgorithmNegotiationPacket._
+  import KeyExchangePacket._
   
   val exampleAlgorithmNegotiationPacket =
-    new AlgorithmNegotiationPacket(
+    new KeyExchangePacket(
       cookie = cookie,
       keyExchangeAlgorithms = keyExchangeAlgorithms,
       serverHostKeyAlgorithms = serverHostKeyAlgorithms,
@@ -29,7 +29,7 @@ class AlgorithmNegotiationPacketSpec extends AnyFunSuite {
 
   test("readAlgorithmsFromInputStream") {
     val algorithmNegotiation =
-      AlgorithmNegotiationPacket.readAlgorithmsFromInputStream(
+      KeyExchangePacket.readAlgorithmsFromInputStream(
         new ByteArrayInputStream(exampleBytes)
       )
     algorithmNegotiation.keyExchangeAlgorithms shouldBe keyExchangeAlgorithms

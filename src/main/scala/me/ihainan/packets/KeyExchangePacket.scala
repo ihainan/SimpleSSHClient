@@ -9,8 +9,10 @@ import me.ihainan.utils.SSHStreamBufferReader
 import me.ihainan.utils.SSHBufferReader
 import me.ihainan.SSHSession
 import org.slf4j.LoggerFactory
+import me.ihainan.utils.SSHFormatter
 
-class AlgorithmNegotiationPacket(
+// https://datatracker.ietf.org/doc/html/rfc4253#section-7
+class KeyExchangePacket(
     val cookie: Array[Byte],
     val keyExchangeAlgorithms: String,
     val serverHostKeyAlgorithms: String,
@@ -25,9 +27,25 @@ class AlgorithmNegotiationPacket(
     val firstKexPacketFollows: Byte
 ) {
   private val logger = LoggerFactory.getLogger(getClass().getName())
-  import AlgorithmNegotiationPacket._
+  import KeyExchangePacket._
 
   private val random = new Random()
+
+  override def toString(): String = {
+    val sb = new StringBuilder()
+    sb.append(s" cookie = ${SSHFormatter.formatByteArray(cookie)}\n")
+    sb.append(s" keyExchangeAlgorithms = $keyExchangeAlgorithms\n")
+    sb.append(s" serverHostKeyAlgorithms = $serverHostKeyAlgorithms\n")
+    sb.append(s" encryptionAlgorithmsClientToServer = $encryptionAlgorithmsClientToServer\n")
+    sb.append(s" encryptionAlgorithmsServerToClient = $encryptionAlgorithmsServerToClient\n")
+    sb.append(s" macAlgorithmsClientToServer = $macAlgorithmsClientToServer\n")
+    sb.append(s" macAlgorithmsServerToClient = $macAlgorithmsServerToClient\n")
+    sb.append(s" compressionAlgorithmsClientToServer = $compressionAlgorithmsServerToClient\n")
+    sb.append(s" languagesClientToServer = $languagesClientToServer\n")
+    sb.append(s" languagesServerToClient = $languagesServerToClient\n")
+    sb.append(s" firstKexPacketFollows = $firstKexPacketFollows\n")
+    sb.toString()
+  }
 
   def generatePayload(): SSHBuffer = {
     val buffer = new SSHBuffer()
@@ -49,7 +67,7 @@ class AlgorithmNegotiationPacket(
   }
 }
 
-object AlgorithmNegotiationPacket {
+object KeyExchangePacket {
   private val logger = LoggerFactory.getLogger(getClass().getName())
   
   private val SSH_MSG_KEXINIT = 0x14.toByte
@@ -81,8 +99,8 @@ object AlgorithmNegotiationPacket {
   )
   val reserved: Int = 0
 
-  def getClientAlgorithms(): AlgorithmNegotiationPacket = {
-    val clientAlgorithms = new AlgorithmNegotiationPacket(
+  def getClientAlgorithms(): KeyExchangePacket = {
+    val clientAlgorithms = new KeyExchangePacket(
       cookie = cookie,
       keyExchangeAlgorithms = keyExchangeAlgorithms,
       serverHostKeyAlgorithms = serverHostKeyAlgorithms,
@@ -99,7 +117,7 @@ object AlgorithmNegotiationPacket {
     clientAlgorithms
   }
 
-  def readAlgorithmsFromInputStream(in: InputStream): AlgorithmNegotiationPacket = {
+  def readAlgorithmsFromInputStream(in: InputStream): KeyExchangePacket = {
     // parse packet
     val streamReader = new SSHStreamBufferReader(in)
     val reader = streamReader.reader
@@ -127,7 +145,7 @@ object AlgorithmNegotiationPacket {
     val languagesServerToClient = payloadReader.getString()
     val firstKexPacketFollows = payloadReader.getByte()
 
-    new AlgorithmNegotiationPacket(
+    new KeyExchangePacket(
       cookie,
       keyExchangeAlgorithms,
       serverHostKeyAlgorithms,

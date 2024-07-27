@@ -14,7 +14,7 @@ import me.ihainan.utils.SSHStreamBufferReader
 import me.ihainan.utils.SSHEncryptedStreamBufferReader
 import org.slf4j.LoggerFactory
 
-// https://www.rfc-editor.org/rfc/rfc4252#section-8
+// https://datatracker.ietf.org/doc/html/rfc4252#section-8
 object AuthPacket {
   private val logger = LoggerFactory.getLogger(getClass().getName())
   

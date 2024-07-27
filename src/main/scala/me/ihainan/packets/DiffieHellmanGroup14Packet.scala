@@ -14,6 +14,8 @@ import me.ihainan.algorithms.SSHSignatureVerifier
 import me.ihainan.algorithms.AES256CTR.logger
 import org.slf4j.LoggerFactory
 
+// https://datatracker.ietf.org/doc/html/rfc4253#section-7.2
+// https://datatracker.ietf.org/doc/html/rfc4253#section-8.2
 object DiffieHellmanGroup14Packet {
   private val logger = LoggerFactory.getLogger(getClass().getName())
   
@@ -34,9 +36,6 @@ object DiffieHellmanGroup14Packet {
   }
 
   def readServerPublibKeyFromInputStream(in: InputStream): Unit = {
-    // REF: https://www.rfc-editor.org/rfc/rfc4253#page-22
-
-    // parse packet
     val streamReader = new SSHStreamBufferReader(in)
     val reader = streamReader.reader
     val packetLength = streamReader.packetLength

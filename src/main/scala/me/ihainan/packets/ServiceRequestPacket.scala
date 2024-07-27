@@ -5,7 +5,7 @@ import java.io.InputStream
 import me.ihainan.utils.SSHEncryptedStreamBufferReader
 import org.slf4j.LoggerFactory
 
-// https://www.ietf.org/rfc/rfc4253.txt
+// https://datatracker.ietf.org/doc/html/rfc4253#section-10
 object ServiceRequestPacket {
   private val logger = LoggerFactory.getLogger(getClass().getName())
   
