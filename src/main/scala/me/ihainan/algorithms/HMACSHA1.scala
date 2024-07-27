@@ -5,9 +5,12 @@ import javax.crypto.Mac
 import javax.crypto.ShortBufferException
 import me.ihainan.SSHSession
 import me.ihainan.utils.SSHFormatter
+import org.slf4j.LoggerFactory
 
 // https://github.com/rtyley/jsch/blob/96b0558b66ec8982e708e46b6e5a254a3650d01b/src/com/jcraft/jsch/jce/HMACSHA1.java
 class HMACSHA1(key: Array[Byte]) {
+  private val logger = LoggerFactory.getLogger(getClass().getName())
+  
   private val bsize = 20
   def getBlockSize: Int = bsize
   val tmp = new Array[Byte](4)
@@ -45,6 +48,8 @@ class HMACSHA1(key: Array[Byte]) {
 }
 
 object HMACSHA1 {
+  private val logger = LoggerFactory.getLogger(getClass().getName())
+
   def generateMAC(data: Array[Byte]): Array[Byte] = {
     val hmacClientToServer = SSHSession.getHMACClientToServer()
     hmacClientToServer.update(SSHSession.getClientSeqNum())
@@ -52,7 +57,7 @@ object HMACSHA1 {
     hmacClientToServer.update(data, 0, data.length)
     val macClientToServer = new Array[Byte](hmacClientToServer.getBlockSize)
     hmacClientToServer.doFinal(macClientToServer, 0)
-    // println("  generated MAC = " + SSHFormatter.formatByteArray(macClientToServer))
+    logger.debug("  generated MAC = " + SSHFormatter.formatByteArray(macClientToServer))
     SSHSession.addClientSeqNum()
     macClientToServer
   }
@@ -64,7 +69,7 @@ object HMACSHA1 {
     hmacVerify.update(data, 0, data.length)
     val macToVerify = new Array[Byte](hmacVerify.getBlockSize)
     hmacVerify.doFinal(macToVerify, 0)
-    // println("  macToVerify = " + SSHFormatter.formatByteArray(macToVerify))
+    logger.debug("  macToVerify = " + SSHFormatter.formatByteArray(macToVerify))
     val valid = mac.sameElements(macToVerify)
     if (!valid) {
       throw new Exception("HMAC validation failed")

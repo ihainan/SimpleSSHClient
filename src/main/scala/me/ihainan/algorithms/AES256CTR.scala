@@ -4,9 +4,12 @@ import javax.crypto.Cipher
 import javax.crypto.spec.{IvParameterSpec, SecretKeySpec}
 import me.ihainan.SSHSession
 import me.ihainan.utils.SSHFormatter
+import org.slf4j.LoggerFactory
 
 // https://github.com/rtyley/jsch/blob/master/src/com/jcraft/jsch/jce/AES256CTR.java
 class AES256CTR(mode: Int, key: Array[Byte], iv: Array[Byte]) {
+  private val logger = LoggerFactory.getLogger(getClass().getName())
+
   private val ivSize = 16
   private val bSize = 32
   private var cipher: Cipher = _
@@ -49,11 +52,13 @@ class AES256CTR(mode: Int, key: Array[Byte], iv: Array[Byte]) {
 }
 
 object AES256CTR {
+  private val logger = LoggerFactory.getLogger(getClass().getName())
+  
   def encrypt(plainText: Array[Byte]): Array[Byte] = {
-    // println(" Plain text: " + SSHFormatter.formatByteArray(plainText))
+    logger.debug(" Plain text: " + SSHFormatter.formatByteArray(plainText))
     val cipherText = new Array[Byte](plainText.length)
     SSHSession.getAESEncrypt.update(plainText, 0, plainText.length, cipherText, 0)
-    // ruprintln(" Encrypted text: " + SSHFormatter.formatByteArray(cipherText))
+    logger.debug(" Encrypted text: " + SSHFormatter.formatByteArray(cipherText))
     cipherText
   }
 

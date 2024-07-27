@@ -3,9 +3,12 @@ package me.ihainan.packets
 import me.ihainan.utils.SSHBuffer
 import java.io.InputStream
 import me.ihainan.utils.SSHEncryptedStreamBufferReader
+import org.slf4j.LoggerFactory
 
 // https://www.ietf.org/rfc/rfc4253.txt
 object ServiceRequestPacket {
+  private val logger = LoggerFactory.getLogger(getClass().getName())
+  
   private val SSH_MSG_SERVICE_REQUEST = 0x05.toByte
   private val SSH_MSG_SERVICE_ACCEPT = 0x06.toByte
 
@@ -25,6 +28,6 @@ object ServiceRequestPacket {
       throw new Exception(s"Unexpected cmd $cmd, expect $SSH_MSG_SERVICE_ACCEPT")
     }
     val serviceName = payloadBuffer.getString()
-    println(s"  serviceName = $serviceName")
+    logger.debug(s"  serviceName = $serviceName")
   }
 }

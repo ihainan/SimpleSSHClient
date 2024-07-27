@@ -11,8 +11,12 @@ import java.math.BigInteger
 import me.ihainan.SSHSession
 import me.ihainan.algorithms.RSAAlgorithm
 import me.ihainan.algorithms.SSHSignatureVerifier
+import me.ihainan.algorithms.AES256CTR.logger
+import org.slf4j.LoggerFactory
 
 object DiffieHellmanGroup14Packet {
+  private val logger = LoggerFactory.getLogger(getClass().getName())
+  
   private val DH_EXCHANGE_CODE = 0x1e.toByte
 
   private def generatePayload(): SSHBuffer = {
@@ -42,7 +46,7 @@ object DiffieHellmanGroup14Packet {
 
     // read payload
     val command = payloadReader.getByte() // SSH_MSG_KEXDH_REPLY
-    // println(s"  packet command = $command")
+    logger.debug(s"  packet command = $command")
 
     // server public host key and certificates (K_S)
     val ks = payloadReader.getByteArray()
@@ -62,7 +66,7 @@ object DiffieHellmanGroup14Packet {
     SSHSession.setServerRSAPublicKey(serverRSAPublicKey)
 
     // TODO: validate server's public key
-    println("  Server's RSA public key: " + RSAAlgorithm.convertToOpenSSHFormat(serverRSAPublicKey))
+    logger.debug("  Server's RSA public key: " + RSAAlgorithm.convertToOpenSSHFormat(serverRSAPublicKey))
 
     // Save into SSHSession
     SSHSession.setF(serverDHF)

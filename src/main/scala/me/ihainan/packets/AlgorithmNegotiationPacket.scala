@@ -8,6 +8,7 @@ import me.ihainan.utils.SSHBuffer
 import me.ihainan.utils.SSHStreamBufferReader
 import me.ihainan.utils.SSHBufferReader
 import me.ihainan.SSHSession
+import org.slf4j.LoggerFactory
 
 class AlgorithmNegotiationPacket(
     val cookie: Array[Byte],
@@ -23,6 +24,7 @@ class AlgorithmNegotiationPacket(
     val languagesServerToClient: String,
     val firstKexPacketFollows: Byte
 ) {
+  private val logger = LoggerFactory.getLogger(getClass().getName())
   import AlgorithmNegotiationPacket._
 
   private val random = new Random()
@@ -48,6 +50,8 @@ class AlgorithmNegotiationPacket(
 }
 
 object AlgorithmNegotiationPacket {
+  private val logger = LoggerFactory.getLogger(getClass().getName())
+  
   private val SSH_MSG_KEXINIT = 0x14.toByte
   val cookie = Array(0x6f, 0x34, 0x3a, 0xdc, 0x69, 0x15, 0x84, 0x4a, 0x9d,
     0x84, 0x2d, 0x36, 0x4c, 0x9c, 0xee, 0xcb).map(_.toByte)
@@ -109,7 +113,7 @@ object AlgorithmNegotiationPacket {
 
     // read payload
     val command = payloadReader.getByte()
-    // println(s"  packet command = $command")
+    logger.debug(s"  packet command = $command")
     val cookie = payloadReader.getByteArray(16)
     val keyExchangeAlgorithms = payloadReader.getString()
     val serverHostKeyAlgorithms = payloadReader.getString()

@@ -5,23 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "java",
-            "name": "Launch Current File",
-            "request": "launch",
-            "mainClass": "${file}"
-        },
-        {
-            "type": "scala",
-            "request": "launch",
-            "name": "Test DiffieHellmanGroup14PacketSpec",
-            "testClass": "me.ihainan.DiffieHellmanGroup14PacketSpec"
-        },
-        {
             "type": "scala",
             "request": "launch",
             "name": "SimpleSSHClient",
             "mainClass": "me.ihainan.SimpleSSHClient",
-            "args": [],
+            "args": ["fyre.ihainan.me", "22", "ihainan", ""],
             "jvmOptions": [],
             "env": {}
         }

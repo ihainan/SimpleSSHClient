@@ -12,9 +12,12 @@ import java.security.spec.RSAPublicKeySpec
 import me.ihainan.utils.SSHBuffer
 import me.ihainan.utils.SSHStreamBufferReader
 import me.ihainan.utils.SSHEncryptedStreamBufferReader
+import org.slf4j.LoggerFactory
 
 // https://www.rfc-editor.org/rfc/rfc4252#section-8
 object AuthPacket {
+  private val logger = LoggerFactory.getLogger(getClass().getName())
+  
   private val SSH_MSG_USERAUTH_REQUEST = 0x32.toByte
   private val SSH_MSG_USERAUTH_FAILURE = 0x33.toByte
   private val SSH_MSG_USERAUTH_SUCCESS = 0x34.toByte
@@ -42,7 +45,7 @@ object AuthPacket {
       throw new Exception(
         s"Authentication failed, name list = {$nameList}, partialSuccess = $partialSuccess")
     } else {
-      println("  Login succeeded")
+      logger.info("  Login succeeded")
     }
   }
 }

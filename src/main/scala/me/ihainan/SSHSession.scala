@@ -10,8 +10,11 @@ import javax.crypto.Cipher
 import me.ihainan.algorithms.HMACSHA1
 import me.ihainan.algorithms.SHA256
 import me.ihainan.utils.SSHFormatter
+import org.slf4j.LoggerFactory
 
 object SSHSession {
+  private val logger = LoggerFactory.getLogger(getClass().getName())
+  
   // Sequence numbers
   private var _clientSeqNum = 0
   private var _serverSeqNum = 0
@@ -147,7 +150,7 @@ object SSHSession {
 
   // https://github.com/apache/mina-sshd/blob/4b30ab065d065a9b85a8b5f65df0d6ad111fae3c/sshd-core/src/main/java/org/apache/sshd/common/session/helpers/AbstractSession.java#L1915
   def derivateKeys(): Unit = {
-    println("Derivating keys...")
+    logger.info("Derivating keys...")
     _IVc2s = derivateKey('A')
     _IVs2c = derivateKey('B')
     _Kc2s = derivateKey('C')
@@ -155,12 +158,12 @@ object SSHSession {
     _MACKc2s = derivateKey('E')
     _MACKs2c = derivateKey('F')
 
-    println("  _IVc2s: " + SSHFormatter.formatByteArray(_IVc2s))
-    println("  _IVs2c: " + SSHFormatter.formatByteArray(_IVs2c))
-    println("  _Kc2s: " + SSHFormatter.formatByteArray(_Kc2s))
-    println("  _Ks2c: " + SSHFormatter.formatByteArray(_Ks2c))
-    println("  _MACKc2s: " + SSHFormatter.formatByteArray(_MACKc2s))
-    println("  _MACKs2c: " + SSHFormatter.formatByteArray(_MACKs2c))
+    logger.debug("  _IVc2s: " + SSHFormatter.formatByteArray(_IVc2s))
+    logger.debug("  _IVs2c: " + SSHFormatter.formatByteArray(_IVs2c))
+    logger.debug("  _Kc2s: " + SSHFormatter.formatByteArray(_Kc2s))
+    logger.debug("  _Ks2c: " + SSHFormatter.formatByteArray(_Ks2c))
+    logger.debug("  _MACKc2s: " + SSHFormatter.formatByteArray(_MACKc2s))
+    logger.debug("  _MACKs2c: " + SSHFormatter.formatByteArray(_MACKs2c))
 
     _aesEncrypt = new AES256CTR(Cipher.ENCRYPT_MODE, _Kc2s, _IVc2s)
     _aesDecrypt = new AES256CTR(Cipher.DECRYPT_MODE, _Ks2c, _IVs2c)

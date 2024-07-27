@@ -5,6 +5,7 @@ import java.io.InputStream
 import java.math.BigInteger
 import me.ihainan.algorithms.AES256CTR
 import me.ihainan.algorithms.HMACSHA1
+import org.slf4j.LoggerFactory
 
 // https://github.com/mwiede/jsch/blob/master/src/main/java/com/jcraft/jsch/Buffer.java
 class SSHBuffer(initData: Array[Byte] = Array.empty[Byte]) {
@@ -93,6 +94,8 @@ class SSHBuffer(initData: Array[Byte] = Array.empty[Byte]) {
 }
 
 abstract class StreamBufferReader(in: InputStream) {
+  private val logger = LoggerFactory.getLogger(getClass().getName())
+
   def readInt(in: InputStream): Int = {
     val bytes = new Array[Byte](4)
     val bytesRead = in.read(bytes)
@@ -117,7 +120,8 @@ abstract class StreamBufferReader(in: InputStream) {
 }
 
 class SSHEncryptedStreamBufferReader(in: InputStream) extends StreamBufferReader(in) {
-  // private val AES_256_BLOCK_SIZE = 16 // AES-256
+  private val logger = LoggerFactory.getLogger(getClass().getName())
+  
   private val MAC_LENGTH = 20 // HMAC-SHA1
   private val _buffer = new SSHBuffer()
   private var _packetLength: Int = _
@@ -131,9 +135,9 @@ class SSHEncryptedStreamBufferReader(in: InputStream) extends StreamBufferReader
     // parase packet length and padding length
     val initialBlock = new Array[Byte](5)
     in.read(initialBlock)
-    // println("  initialBlock = " + SSHFormatter.formatByteArray(initialBlock))
+    logger.debug("  initialBlock = " + SSHFormatter.formatByteArray(initialBlock))
     val decryptedInitialBlock = AES256CTR.decrypt(initialBlock)
-    // println("  decryptedInitialBlock = " + SSHFormatter.formatByteArray(decryptedInitialBlock))
+    logger.debug("  decryptedInitialBlock = " + SSHFormatter.formatByteArray(decryptedInitialBlock))
     SSHFormatter.formatByteArray(decryptedInitialBlock)
     val initBuffer = new SSHBufferReader(decryptedInitialBlock)
     _packetLength = initBuffer.getInt()
@@ -144,15 +148,15 @@ class SSHEncryptedStreamBufferReader(in: InputStream) extends StreamBufferReader
     val encryptedDataLength = packetLength - 1
     val encryptedData = new Array[Byte](encryptedDataLength)
     in.read(encryptedData)
-    // println("  encryptedData = " + SSHFormatter.formatByteArray(encryptedData))
+    logger.debug("  encryptedData = " + SSHFormatter.formatByteArray(encryptedData))
     val decryptedData = AES256CTR.decrypt(encryptedData)
-    // println("  decryptedData = " + SSHFormatter.formatByteArray(decryptedData))
-    // println("  decryptedData to String = " + new String(decryptedData))
+    logger.debug("  decryptedData = " + SSHFormatter.formatByteArray(decryptedData))
+    logger.trace("  decryptedData to String = " + new String(decryptedData))
 
     // read MAC
     val macData = new Array[Byte](MAC_LENGTH)
     in.read(macData)
-    // println("  macData = " + SSHFormatter.formatByteArray(macData))
+    logger.debug("  macData = " + SSHFormatter.formatByteArray(macData))
     HMACSHA1.validateMAC(decryptedInitialBlock ++ decryptedData, macData)
 
     // set buffer

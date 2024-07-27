@@ -5,9 +5,12 @@ import me.ihainan.utils.SSHEncryptedStreamBufferReader
 import java.io.InputStream
 import scala.io.StdIn
 import java.io.OutputStream
+import org.slf4j.LoggerFactory
 
 // https://www.rfc-editor.org/rfc/rfc4254
 class ChannelPacket(in: InputStream, out: OutputStream) {
+  private val logger = LoggerFactory.getLogger(getClass().getName())
+
   private val SSH_MSG_GLOBAL_REQUEST = 80.toByte
   private val SSH_MSG_REQUEST_SUCCESS = 81.toByte
   private val SSH_MSG_REQUEST_FAILURE = 82.toByte
@@ -48,47 +51,66 @@ class ChannelPacket(in: InputStream, out: OutputStream) {
   private var maxPacketSize: Int = _
 
   def serverListenerThread() = new Thread() {
+    private val logger = LoggerFactory.getLogger(getClass().getName())
+
     override def run(): Unit = {
       out.write(generateSessionChannelOpenPacket.getData)
       out.flush()
-      while (true) {
+      var loop = true
+      while (loop) {
         val reader = new SSHEncryptedStreamBufferReader(in)
         val payloadBuffer = reader.reader
         val paddingLength = payloadBuffer.getByte()
         val cmd = payloadBuffer.getByte()
-        println(s"Received " + codeMap(cmd))
+        logger.info(s"Received " + codeMap(cmd))
         cmd match {
           case SSH_MSG_GLOBAL_REQUEST =>
           case SSH_MSG_REQUEST_SUCCESS =>
           case SSH_MSG_REQUEST_FAILURE =>
           case SSH_MSG_CHANNEL_OPEN =>
           case SSH_MSG_CHANNEL_OPEN_CONFIRMATION =>
+            recipientChannel = payloadBuffer.getInt()
+            val senderChannel = payloadBuffer.getInt()
+            initialWindowSize = payloadBuffer.getInt()
+            maxPacketSize = payloadBuffer.getInt()
+            logger.debug("  recipientChannel = {}", recipientChannel)
+            logger.debug("  initialWindowSize = {}", initialWindowSize)
+            logger.debug("  maxPacketSize = {}", maxPacketSize)
+
+            // read user's input
             print("> ")
             val cmd = StdIn.readLine()
             out.write(generateChannelRequest(cmd).getData)
             out.flush
           case SSH_MSG_CHANNEL_OPEN_FAILURE =>
+            throw new Exception("Failed to open a channel")
           case SSH_MSG_CHANNEL_WINDOW_ADJUST =>
           case SSH_MSG_CHANNEL_DATA =>
-            payloadBuffer.getInt()
+            val currentRecipientChannel = payloadBuffer.getInt()
             val data = payloadBuffer.getString()
             println(data)
           case SSH_MSG_CHANNEL_EXTENDED_DATA =>
-            payloadBuffer.getInt()
+            val currentRecipientChannel = payloadBuffer.getInt()
+            val dataType = payloadBuffer.getInt()
+            logger.debug("  currentRecipientChannel = {}", currentRecipientChannel)
+            logger.debug("  dataType = {}", dataType)
             val data = payloadBuffer.getString()
             System.err.println(data)
           case SSH_MSG_CHANNEL_EOF =>
+            logger.info("Channel closing...")
             out.write(generateCloseChannelPacket().getData)
             out.flush
           case SSH_MSG_CHANNEL_CLOSE =>
-            println("BYE!")
-            this.interrupt()
+            logger.info("Channel closed.")
+            loop = false
           case SSH_MSG_CHANNEL_REQUEST =>
           case SSH_MSG_CHANNEL_SUCCESS =>
+            val currentRecipientChannel = payloadBuffer.getInt()
+            logger.info("  Channel opened, recipient channel is {}", currentRecipientChannel)
           case SSH_MSG_CHANNEL_FAILURE =>
             System.err.println("Failed to open channel")
             println("BYE!")
-            this.interrupt()
+            loop = false
         }
       }
     }
@@ -104,32 +126,6 @@ class ChannelPacket(in: InputStream, out: OutputStream) {
     buffer.encryptAndAppendMAC()
   }
 
-  def receiveChannelOpenConfirmation(in: InputStream): Unit = {
-    val reader = new SSHEncryptedStreamBufferReader(in)
-    val payloadBuffer = reader.reader
-    val paddingLength = payloadBuffer.getByte()
-    val cmd = payloadBuffer.getByte()
-    if (cmd != SSH_MSG_CHANNEL_OPEN_CONFIRMATION) {
-      println(s" Unexpected cmd: $cmd...will retry to read SSH_MSG_CHANNEL_OPEN_CONFIRMATION")
-      receiveChannelOpenConfirmation(in)
-    } else {
-      if (cmd == SSH_MSG_CHANNEL_OPEN_FAILURE) {
-        throw new Exception("Failed to open channel")
-      } else if (cmd != SSH_MSG_CHANNEL_OPEN_CONFIRMATION) {
-        throw new Exception(s"Unexpected cmd $cmd, expect $SSH_MSG_CHANNEL_OPEN_CONFIRMATION")
-      }
-      recipientChannel = payloadBuffer.getInt()
-      val senderChannel = payloadBuffer.getInt()
-      initialWindowSize = payloadBuffer.getInt()
-      maxPacketSize = payloadBuffer.getInt()
-
-      println(s"  recipientChannel = $recipientChannel")
-      println(s"  senderChannel = $senderChannel")
-      println(s"  initialWindowSize = $initialWindowSize")
-      println(s"  maxPacketSize = $maxPacketSize")
-    }
-  }
-
   def generateChannelRequest(cmd: String): SSHBuffer = {
     val buffer = new SSHBuffer()
     buffer.putByte(SSH_MSG_CHANNEL_REQUEST)
@@ -140,61 +136,11 @@ class ChannelPacket(in: InputStream, out: OutputStream) {
     buffer.encryptAndAppendMAC()
   }
 
-  def receiveChannelSuccess(in: InputStream): Unit = {
-    val reader = new SSHEncryptedStreamBufferReader(in)
-    val payloadBuffer = reader.reader
-    val paddingLength = payloadBuffer.getByte()
-    val cmd = payloadBuffer.getByte()
-    if (cmd != SSH_MSG_CHANNEL_FAILURE && cmd != SSH_MSG_CHANNEL_SUCCESS) {
-      println(s" Unexpected cmd: $cmd...will continue to wait the SSH_MSG_CHANNEL_FAILURE packet")
-      receiveChannelSuccess(in)
-    } else {
-      if (cmd == SSH_MSG_CHANNEL_FAILURE) {
-        println("  Failed to execute command, received SSH_MSG_CHANNEL_FAILURE")
-      } else if (cmd != SSH_MSG_CHANNEL_SUCCESS) {
-        throw new Exception(s"Unexpected cmd $cmd, expect $SSH_MSG_CHANNEL_SUCCESS")
-      }
-      val currentRecipientChannel = payloadBuffer.getInt()
-      println(s"  currentRecipientChannel = $currentRecipientChannel")
-    }
-  }
-
-  def receiveData(in: InputStream): Unit = {
-    val reader = new SSHEncryptedStreamBufferReader(in)
-    val payloadBuffer = reader.reader
-    val paddingLength = payloadBuffer.getByte()
-    val cmd = payloadBuffer.getByte()
-    if (cmd != SSH_MSG_CHANNEL_DATA) {
-      throw new Exception(s"Unexpected cmd $cmd, expect $SSH_MSG_CHANNEL_DATA")
-    }
-    val currentRecipientChannel = payloadBuffer.getInt()
-    println(s"  currentRecipientChannel = $currentRecipientChannel")
-    val data = payloadBuffer.getString()
-    println(s"  response: \n$data")
-  }
-
   def generateCloseChannelPacket(): SSHBuffer = {
     val buffer = new SSHBuffer()
     buffer.putByte(SSH_MSG_CHANNEL_CLOSE)
     buffer.putInt(recipientChannel)
     buffer.encryptAndAppendMAC()
-  }
-
-  def receiveCloseChannel(in: InputStream): Unit = {
-    val reader = new SSHEncryptedStreamBufferReader(in)
-    val payloadBuffer = reader.reader
-    val paddingLength = payloadBuffer.getByte()
-    val cmd = payloadBuffer.getByte()
-    if (cmd != SSH_MSG_CHANNEL_CLOSE) {
-      println(s" Unexpected cmd: $cmd...will continue to wait the SSH_MSG_CHANNEL_CLOSE packet")
-      receiveCloseChannel(in)
-    } else {
-      if (cmd != SSH_MSG_CHANNEL_CLOSE) {
-        throw new Exception(s"Unexpected cmd $cmd, expect $SSH_MSG_CHANNEL_CLOSE")
-      }
-      val currentRecipientChannel = payloadBuffer.getInt()
-      println(s"  currentRecipientChannel = $currentRecipientChannel")
-    }
   }
 }
 

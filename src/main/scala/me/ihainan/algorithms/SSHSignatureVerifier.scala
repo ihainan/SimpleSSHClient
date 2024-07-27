@@ -18,8 +18,11 @@ import me.ihainan.utils.SSHFormatter
 import java.security.spec.RSAPublicKeySpec
 import me.ihainan.utils.SSHBufferReader
 import me.ihainan.SSHSession
+import org.slf4j.LoggerFactory
 
 object SSHSignatureVerifier {
+  private val logger = LoggerFactory.getLogger(getClass().getName())
+  
   // https://github.com/mwiede/jsch/blob/b32935200b0a102a545c2c62a6e1f38fcc78953e/src/main/java/com/jcraft/jsch/DHGN.java#L151
   // https://github.com/openssh/libopenssh/blob/05dfdd5f54d9a1bae5544141a7ee65baa3313ecd/ssh/kexdh.c#L40
   // https://github.com/apache/mina-sshd/blob/master/sshd-core/src/main/java/org/apache/sshd/server/kex/DHGServer.java#L47
@@ -38,19 +41,19 @@ object SSHSignatureVerifier {
     buffer.putMPInt(getK())
     sha.update(buffer.getData, 0, buffer.getData.length)
 
-    // println("  getClientVersion = " + SSHFormatter.formatByteArray(getClientVersion.getBytes))
-    // println("  getServerVersion = " + SSHFormatter.formatByteArray(getServerVersion.getBytes))
-    // println("  getIC = " + SSHFormatter.formatByteArray(getIC()))
-    // println("  getIS = " + SSHFormatter.formatByteArray(getIS()))
-    // println("  getKS = " + SSHFormatter.formatByteArray(getKS()))
-    // println("  getE = " + SSHFormatter.formatByteArray(getE().toByteArray))
-    // println("  getF = " + SSHFormatter.formatByteArray(getF()))
-    // println("  getK = " + SSHFormatter.formatByteArray(getK()))
-    // println("  buffer = " + SSHFormatter.formatByteArray(buffer.getData))
+    logger.debug("  getClientVersion = " + SSHFormatter.formatByteArray(getClientVersion.getBytes))
+    logger.debug("  getServerVersion = " + SSHFormatter.formatByteArray(getServerVersion.getBytes))
+    logger.debug("  getIC = " + SSHFormatter.formatByteArray(getIC()))
+    logger.debug("  getIS = " + SSHFormatter.formatByteArray(getIS()))
+    logger.debug("  getKS = " + SSHFormatter.formatByteArray(getKS()))
+    logger.debug("  getE = " + SSHFormatter.formatByteArray(getE().toByteArray))
+    logger.debug("  getF = " + SSHFormatter.formatByteArray(getF()))
+    logger.debug("  getK = " + SSHFormatter.formatByteArray(getK()))
+    logger.debug("  buffer = " + SSHFormatter.formatByteArray(buffer.getData))
 
     val H = sha.digest()
     SSHSession.setH(H)
-    println("  H = " + SSHFormatter.formatByteArray(H))
+    logger.debug("  H = " + SSHFormatter.formatByteArray(H))
 
     val sig = Signature.getInstance("SHA512withRSA")
     sig.initVerify(getServerRSAPublicKey());

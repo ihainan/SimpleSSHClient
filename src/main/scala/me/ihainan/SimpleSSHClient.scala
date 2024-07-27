@@ -8,6 +8,7 @@ import me.ihainan.utils.SSHBuffer
 import me.ihainan.packets._
 import me.ihainan.utils.SSHFormatter
 import java.nio.channels.Channel
+import org.slf4j.LoggerFactory
 
 class SimpleSSHClient(
     val host: String,
@@ -15,11 +16,13 @@ class SimpleSSHClient(
     val username: String,
     val password: String
 ) {
-  private val socket: Socket = createConnection()
-  private val in: InputStream = socket.getInputStream
-  private val out: OutputStream = socket.getOutputStream
+  private val logger = LoggerFactory.getLogger(getClass().getName())
 
-  private val SSH_CLIENT_VERSON = "SSH-2.0-JSCH_0.2.18"
+  private var socket: Socket = _
+  private var in: InputStream = _
+  private var out: OutputStream = _
+
+  private val SSH_CLIENT_VERSON = "SSH-2.0-SimpleSSH_0.0.1"
 
   private val clientAlrithms = AlgorithmNegotiationPacket.getClientAlgorithms()
   private var serverAlgorithms: AlgorithmNegotiationPacket = _
@@ -29,66 +32,68 @@ class SimpleSSHClient(
     out.flush()
   }
 
-  def createConnection(): Socket = {
-    val socket = new Socket(host, port)
-    println("Server connected")
-    socket
+  def createConnection(): Unit = {
+    socket = new Socket(host, port)
+    in = socket.getInputStream()
+    out = socket.getOutputStream()
+    logger.info("Connected to the server {}:{}", host, port)
   }
 
-  def connect(): Unit = {
-    // Send client's SSH version to the server
-    sendClientVersion()
+  def start(): Unit = {
+    try {
+      // connect to the server
+      createConnection()
 
-    // Receive server's SSH version
-    receiveServerVersion()
+      // Send client's SSH version to the server
+      sendClientVersion()
 
-    // TODO: check the compatibility between the client and server
+      // Receive server's SSH version
+      receiveServerVersion()
 
-    // client key exchange init
-    sendClientAlgorithms()
+      // TODO: check the compatibility between the client and server
 
-    // server key exchange init
-    receiveServerAlgorithms()
+      // client key exchange init
+      sendClientAlgorithms()
 
-    // sends public key to the server
-    clientKEX()
+      // server key exchange init
+      receiveServerAlgorithms()
 
-    // receive server's public to generate shared secret
-    serverKEX()
+      // sends public key to the server
+      clientKEX()
 
-    // client sends/receives the NEW KEYS packet to/from the server
-    sendNewKey()
-    receiveNewKey()
+      // receive server's public to generate shared secret
+      serverKEX()
 
-    // read extra info from the server (optional)
-    receiveExtInfo()
+      // client sends/receives the NEW KEYS packet to/from the server
+      sendNewKey()
+      receiveNewKey()
 
-    // request for auth service
-    sendServiceRequest("ssh-userauth")
-    receiveServiceAccept()
+      // read extra info from the server (optional)
+      receiveExtInfo()
 
-    // auth using password
-    sendAuthRequest(username, password)
-    receivePasswordAuthenticationResponse()
+      // request for auth service
+      sendServiceRequest("ssh-userauth")
+      receiveServiceAccept()
 
-    // create new session
-    val channel = new ChannelPacket(in, out)
-    val thread = channel.serverListenerThread()
-    thread.start()
-    thread.join()
-    // sendSessionChannelOpenRequest(channel)
-    // receiveSessionChannelConfirmation(channel)
-    // sendChannelRequest(channel, "ls -l $HOME")
-    // receiveChannelSuccess(channel)
-    // receiveChannelData(channel)
-    // // TODO: stderr, SSH_MSG_CHANNEL_EXTENDED_DATA
-    // sendCloseChannelRequest(channel)
-    // receiveChannelClose(channel)
+      // auth using password
+      sendAuthRequest(username, password)
+      receivePasswordAuthenticationResponse()
+
+      // create new session
+      val channel = new ChannelPacket(in, out)
+      val thread = channel.serverListenerThread()
+      thread.start()
+      thread.join()
+    } finally {
+      if (in != null) in.close()
+      if (out != null) out.close()
+      if (socket != null) socket.close()
+    }
   }
 
   def sendClientVersion(): Unit = {
-    println(s"Sending SSH version to the server...")
-    println(s"  clientSSHVersion = $SSH_CLIENT_VERSON")
+    logger.info(s"Sending SSH version to the server...")
+    logger.info(s"  clientSSHVersion = $SSH_CLIENT_VERSON")
     val buffer = new SSHBuffer()
     buffer.putByteArray(SSH_CLIENT_VERSON.getBytes())
     buffer.putByteArray(Array(0x0d, 0x0a)) // CR LF
@@ -97,7 +102,7 @@ class SimpleSSHClient(
   }
 
   def receiveServerVersion(): Unit = {
-    println(s"Receving SSH version from the server...")
+    logger.info(s"Receving SSH version from the server...")
     val buffer = collection.mutable.ArrayBuffer.empty[Byte]
     var lastByte: Int = -1
     var currentByte: Int = -1
@@ -108,7 +113,7 @@ class SimpleSSHClient(
       if (lastByte == 0x0d && currentByte == 0x0a) {
         buffer.trimEnd(1)
         serverVersion = new String(buffer.toArray)
-        println(s"  serverSSHVersion = $serverVersion")
+        logger.info(s"  serverSSHVersion = $serverVersion")
       }
       buffer += currentByte.toByte
       lastByte = currentByte
@@ -117,12 +122,12 @@ class SimpleSSHClient(
   }
 
   private def sendClientAlgorithms(): Unit = {
-    println("SSH_MSG_KEXINIT(client -> server)...")
+    logger.info("SSH_MSG_KEXINIT(client -> server)...")
     write(clientAlrithms.generatePacket().getData)
   }
 
   private def receiveServerAlgorithms(): Unit = {
-    println("SSH_MSG_KEXINIT(server -> client)...")
+    logger.info("SSH_MSG_KEXINIT(server -> client)...")
     serverAlgorithms = AlgorithmNegotiationPacket.readAlgorithmsFromInputStream(in)
     // println("Server algorithms: ")
     // println(serverAlgorithms)
@@ -137,73 +142,38 @@ class SimpleSSHClient(
   }
 
   private def sendNewKey(): Unit = {
-    println("Sending NEW_KEY...")
+    logger.info("Sending NEW_KEY packet...")
     write(NewKeyPacket.generatePacket())
   }
 
   private def receiveNewKey(): Unit = {
-    println("Receving NEW_KEY...")
+    logger.info("Receving NEW_KEY...")
     NewKeyPacket.readNewKeyFromInputStream(in)
   }
 
   private def receiveExtInfo(): Unit = {
-    println("Receving extra info...")
+    logger.info("Receving extra info...")
     ExtInfoPacket.readExtInfoPacket(in)
   }
 
   private def sendServiceRequest(service: String): Unit = {
-    println(s"Sending service request $service...")
+    logger.info(s"Sending service request $service...")
     write(ServiceRequestPacket.generateServiceRequestPacket(service).getData)
   }
 
   private def receiveServiceAccept(): Unit = {
-    println(s"Receving service accept packet...")
+    logger.info(s"Receving service accept packet...")
     ServiceRequestPacket.receiveServiceAccept(in)
   }
 
   private def sendAuthRequest(username: String, password: String): Unit = {
-    println("Sending auth request...")
+    logger.info("Sending auth request...")
     write(AuthPacket.generatePasswordUserAuthPacket(username, password).getData)
   }
 
   private def receivePasswordAuthenticationResponse(): Unit = {
-    println("Receving auth response...")
+    logger.info("Receving auth response...")
     AuthPacket.readPasswordAuthenticationResponse(in)
-  }
-
-  private def sendSessionChannelOpenRequest(channel: ChannelPacket): Unit = {
-    println("Sending session channel open request...")
-    write(channel.generateSessionChannelOpenPacket.getData) 
-  }
-
-  private def receiveSessionChannelConfirmation(channel: ChannelPacket): Unit = {
-    println("Receving session channel confirmation resposne...")
-    channel.receiveChannelOpenConfirmation(in)
-  }
-
-  private def sendChannelRequest(channel: ChannelPacket, cmd: String): Unit = {
-    println("Sending new channel request...")
-    write(channel.generateChannelRequest(cmd).getData)     
-  }
-
-  private def receiveChannelSuccess(channel: ChannelPacket): Unit = {
-    println("Receving channel success resposne...")
-    channel.receiveChannelSuccess(in)
-  }
-
-  private def receiveChannelData(channel: ChannelPacket): Unit = {
-    println("Receving channel success resposne...")
-    channel.receiveData(in)
-  }
-
-  private def sendCloseChannelRequest(channel: ChannelPacket): Unit = {
-    println("Sending channel close request...")
-    write(channel.generateCloseChannelPacket().getData)
-  }
-
-  private def receiveChannelClose(channel: ChannelPacket): Unit = {
-    println("Receving channel close resposne...")
-    channel.receiveCloseChannel(in)
   }
 
   def closeConnection(): Unit = {
@@ -214,8 +184,10 @@ class SimpleSSHClient(
 }
 
 object SimpleSSHClient extends App {
-  val client = new SimpleSSHClient("fyre.ihainan.me", 22, "ihainan", "")
-  // val client = new SimpleSSHClient("la.ihainan.me", 22, "user", "password")
-  client.connect()
-  client.closeConnection()
+  if (args.length < 4) {
+    println("Usage: SimpleSSHClient <host> <port> <username> <password>")
+    System.exit(1)
+  }
+  val client = new SimpleSSHClient(args(0), args(1).toInt, args(2), args(3))
+  client.start()
 }
