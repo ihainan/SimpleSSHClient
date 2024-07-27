@@ -52,7 +52,7 @@ object HMACSHA1 {
     hmacClientToServer.update(data, 0, data.length)
     val macClientToServer = new Array[Byte](hmacClientToServer.getBlockSize)
     hmacClientToServer.doFinal(macClientToServer, 0)
-    println("  generated MAC = " + SSHFormatter.formatByteArray(macClientToServer))
+    // println("  generated MAC = " + SSHFormatter.formatByteArray(macClientToServer))
     SSHSession.addClientSeqNum()
     macClientToServer
   }
@@ -64,7 +64,7 @@ object HMACSHA1 {
     hmacVerify.update(data, 0, data.length)
     val macToVerify = new Array[Byte](hmacVerify.getBlockSize)
     hmacVerify.doFinal(macToVerify, 0)
-    println("  macToVerify = " + SSHFormatter.formatByteArray(macToVerify))
+    // println("  macToVerify = " + SSHFormatter.formatByteArray(macToVerify))
     val valid = mac.sameElements(macToVerify)
     if (!valid) {
       throw new Exception("HMAC validation failed")

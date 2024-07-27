@@ -50,10 +50,10 @@ class AES256CTR(mode: Int, key: Array[Byte], iv: Array[Byte]) {
 
 object AES256CTR {
   def encrypt(plainText: Array[Byte]): Array[Byte] = {
-    println(" Plain text: " + SSHFormatter.formatByteArray(plainText))
+    // println(" Plain text: " + SSHFormatter.formatByteArray(plainText))
     val cipherText = new Array[Byte](plainText.length)
     SSHSession.getAESEncrypt.update(plainText, 0, plainText.length, cipherText, 0)
-    println(" Encrypted text: " + SSHFormatter.formatByteArray(cipherText))
+    // ruprintln(" Encrypted text: " + SSHFormatter.formatByteArray(cipherText))
     cipherText
   }
 

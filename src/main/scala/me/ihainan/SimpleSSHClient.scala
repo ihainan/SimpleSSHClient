@@ -72,15 +72,18 @@ class SimpleSSHClient(
     receivePasswordAuthenticationResponse()
 
     // create new session
-    val channel = new ChannelPacket()
-    sendSessionChannelOpenRequest(channel)
-    receiveSessionChannelConfirmation(channel)
-    sendChannelRequest(channel, "ls -l /")
-    receiveChannelSuccess(channel)
-    receiveChannelData(channel)
-    // TODO: stderr, SSH_MSG_CHANNEL_EXTENDED_DATA
-    sendCloseChannelRequest(channel)
-    receiveChannelClose(channel)
+    val channel = new ChannelPacket(in, out)
+    val thread = channel.serverListenerThread()
+    thread.start()
+    thread.join()
+    // sendSessionChannelOpenRequest(channel)
+    // receiveSessionChannelConfirmation(channel)
+    // sendChannelRequest(channel, "ls -l $HOME")
+    // receiveChannelSuccess(channel)
+    // receiveChannelData(channel)
+    // // TODO: stderr, SSH_MSG_CHANNEL_EXTENDED_DATA
+    // sendCloseChannelRequest(channel)
+    // receiveChannelClose(channel)
   }
 
   def sendClientVersion(): Unit = {
@@ -214,6 +217,5 @@ object SimpleSSHClient extends App {
   val client = new SimpleSSHClient("fyre.ihainan.me", 22, "ihainan", "")
   // val client = new SimpleSSHClient("la.ihainan.me", 22, "user", "password")
   client.connect()
-  Thread.sleep(60000)
   client.closeConnection()
 }

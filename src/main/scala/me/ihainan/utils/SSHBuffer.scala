@@ -131,9 +131,9 @@ class SSHEncryptedStreamBufferReader(in: InputStream) extends StreamBufferReader
     // parase packet length and padding length
     val initialBlock = new Array[Byte](5)
     in.read(initialBlock)
-    println("  initialBlock = " + SSHFormatter.formatByteArray(initialBlock))
+    // println("  initialBlock = " + SSHFormatter.formatByteArray(initialBlock))
     val decryptedInitialBlock = AES256CTR.decrypt(initialBlock)
-    println("  decryptedInitialBlock = " + SSHFormatter.formatByteArray(decryptedInitialBlock))
+    // println("  decryptedInitialBlock = " + SSHFormatter.formatByteArray(decryptedInitialBlock))
     SSHFormatter.formatByteArray(decryptedInitialBlock)
     val initBuffer = new SSHBufferReader(decryptedInitialBlock)
     _packetLength = initBuffer.getInt()
@@ -144,15 +144,15 @@ class SSHEncryptedStreamBufferReader(in: InputStream) extends StreamBufferReader
     val encryptedDataLength = packetLength - 1
     val encryptedData = new Array[Byte](encryptedDataLength)
     in.read(encryptedData)
-    println("  encryptedData = " + SSHFormatter.formatByteArray(encryptedData))
+    // println("  encryptedData = " + SSHFormatter.formatByteArray(encryptedData))
     val decryptedData = AES256CTR.decrypt(encryptedData)
-    println("  decryptedData = " + SSHFormatter.formatByteArray(decryptedData))
+    // println("  decryptedData = " + SSHFormatter.formatByteArray(decryptedData))
     // println("  decryptedData to String = " + new String(decryptedData))
 
     // read MAC
     val macData = new Array[Byte](MAC_LENGTH)
     in.read(macData)
-    println("  macData = " + SSHFormatter.formatByteArray(macData))
+    // println("  macData = " + SSHFormatter.formatByteArray(macData))
     HMACSHA1.validateMAC(decryptedInitialBlock ++ decryptedData, macData)
 
     // set buffer
