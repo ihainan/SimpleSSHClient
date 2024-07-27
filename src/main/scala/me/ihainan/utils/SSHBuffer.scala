@@ -87,8 +87,8 @@ class SSHBuffer(initData: Array[Byte] = Array.empty[Byte]) {
   def encryptAndAppendMAC(): SSHBuffer = {
     val packet = wrapWithPadding()
     val encryptedPacket = AES256CTR.encrypt(packet.getData)
-    val mac = HMACSHA1.generateMAC(encryptedPacket)
-    new SSHBuffer(packet.getData ++ mac)
+    val mac = HMACSHA1.generateMAC(packet.getData)
+    new SSHBuffer(encryptedPacket ++ mac)
   }
 }
 

@@ -62,8 +62,13 @@ class SimpleSSHClient(
     // read extra info from the server (optional)
     receiveExtInfo()
 
+    // request for auth service
+    sendServiceRequest("ssh-userauth")
+    receiveServiceAccept()
+
     // auth using password
-    sendAuthRequest()
+    sendAuthRequest(username, password)
+    receivePasswordAuthenticationResponse()
   }
 
   def sendClientVersion(): Unit = {
@@ -126,14 +131,29 @@ class SimpleSSHClient(
     NewKeyPacket.readNewKeyFromInputStream(in)
   }
 
-  def receiveExtInfo(): Unit = {
+  private def receiveExtInfo(): Unit = {
     println("Receving extra info...")
     ExtInfoPacket.readExtInfoPacket(in)
   }
 
-  private def sendAuthRequest(): Unit = {
+  private def sendServiceRequest(service: String): Unit = {
+    println(s"Sending service request $service...")
+    write(ServiceRequestPacket.generateServiceRequestPacket(service).getData)
+  }
+
+  private def receiveServiceAccept(): Unit = {
+    println(s"Receving service accept packet...")
+    ServiceRequestPacket.receiveServiceAccept(in)
+  }
+
+  private def sendAuthRequest(username: String, password: String): Unit = {
     println("Sending auth request...")
-    write(AuthPacket.generatePasswordUserAuthPacket("ihainan", "password").getData)
+    write(AuthPacket.generatePasswordUserAuthPacket(username, password).getData)
+  }
+
+  private def receivePasswordAuthenticationResponse(): Unit = {
+    println("Receving auth response...")
+    AuthPacket.readPasswordAuthenticationResponse(in)
   }
 
   def closeConnection(): Unit = {
@@ -144,8 +164,9 @@ class SimpleSSHClient(
 }
 
 object SimpleSSHClient extends App {
-  val client = new SimpleSSHClient("localhost", 2222, "user", "password")
+  val client = new SimpleSSHClient("localhost", 2222, "ihainan", "password")
   // val client = new SimpleSSHClient("la.ihainan.me", 22, "user", "password")
   client.connect()
+  Thread.sleep(60000)
   client.closeConnection()
 }
