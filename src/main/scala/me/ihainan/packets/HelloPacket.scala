@@ -1,4 +1,4 @@
-package me.ihainan.algorithms
+package me.ihainan.packets
 
 import org.slf4j.LoggerFactory
 import me.ihainan.utils.SSHBuffer

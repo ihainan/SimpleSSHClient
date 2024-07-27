@@ -9,7 +9,7 @@ import me.ihainan.packets._
 import me.ihainan.utils.SSHFormatter
 import java.nio.channels.Channel
 import org.slf4j.LoggerFactory
-import me.ihainan.algorithms.HelloPacket
+import me.ihainan.packets.HelloPacket
 
 class SimpleSSHClient(
     val host: String,
@@ -105,14 +105,14 @@ class SimpleSSHClient(
 
   private def sendClientAlgorithms(): Unit = {
     logger.info("SSH_MSG_KEXINIT(client -> server)...")
-    logger.info("Client's algorithms: \n{}", clientAlrithms.toString(): Any)
+    logger.debug("Client's algorithms: \n{}", clientAlrithms.toString(): Any)
     write(clientAlrithms.generatePacket().getData)
   }
 
   private def receiveServerAlgorithms(): Unit = {
     logger.info("SSH_MSG_KEXINIT(server -> client)...")
     serverAlgorithms = KeyExchangePacket.readAlgorithmsFromInputStream(in)
-    logger.info("server's algorithms: \n{}", serverAlgorithms.toString(): Any)
+    logger.debug("server's algorithms: \n{}", serverAlgorithms.toString(): Any)
   }
 
   private def clientKEX(): Unit = {
