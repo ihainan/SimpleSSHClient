@@ -10,11 +10,22 @@ import org.slf4j.LoggerFactory
 // https://github.com/mwiede/jsch/blob/master/src/main/java/com/jcraft/jsch/Buffer.java
 class SSHBuffer(initData: Array[Byte] = Array.empty[Byte]) {
   private val buffer = collection.mutable.ArrayBuffer.empty[Byte]
+  private val hexOrHighligthRange = collection.mutable.ArrayBuffer.empty[String]
+  private val color = "#F4FA58"
   buffer.appendAll(initData)
+  if (initData.nonEmpty) {
+    hexOrHighligthRange += s"""0:${initData.length}:$color:Init data (Byte array\\, ${initData.length} bytes)"""
+  }
+
+  def hexOrHighligthRangeStr(): String = {
+    hexOrHighligthRange.toArray.mkString(",")
+  }
 
   def putString(str: String): Unit = {
+    val currentLen = length
     putInt(str.length())
     putByteArray(str.getBytes())
+    hexOrHighligthRange += s"""$currentLen:$length:$color:(String\\, ${length - currentLen - 3} bytes)"""
   }
 
   def putInt(num: Int): Unit = {
@@ -41,6 +52,7 @@ class SSHBuffer(initData: Array[Byte] = Array.empty[Byte]) {
   }
 
   def putMPInt(bytes: Array[Byte]): Unit = {
+    val currentLen = length
     val len = bytes.length
     if ((bytes.head & 0x80) != 0) {
       // to avoid negative value
@@ -50,6 +62,7 @@ class SSHBuffer(initData: Array[Byte] = Array.empty[Byte]) {
       putInt(len)
     }
     putByteArray(bytes)
+    hexOrHighligthRange += s"""$currentLen:$length:$color:(MPInt\\, ${length - currentLen - 3} bytes)"""
   }
 
   def putMPInt(num: BigInteger): Unit = {
@@ -96,7 +109,7 @@ class SSHBuffer(initData: Array[Byte] = Array.empty[Byte]) {
 abstract class StreamBufferReader(in: InputStream) {
   private val logger = LoggerFactory.getLogger(getClass().getName())
 
-  def readInt(in: InputStream): Int = {
+  def readPacketLength(in: InputStream): Int = {
     val bytes = new Array[Byte](4)
     val bytesRead = in.read(bytes)
     if (bytesRead != 4) {
@@ -107,7 +120,7 @@ abstract class StreamBufferReader(in: InputStream) {
     ByteBuffer.wrap(bytes).getInt
   }
 
-  def readByteArray(in: InputStream, length: Int): Array[Byte] = {
+  def readPacketData(in: InputStream, length: Int): Array[Byte] = {
     val bytes = new Array[Byte](length)
     val bytesRead = in.read(bytes)
     if (bytesRead != length) {
@@ -121,7 +134,7 @@ abstract class StreamBufferReader(in: InputStream) {
 
 class SSHEncryptedStreamBufferReader(in: InputStream) extends StreamBufferReader(in) {
   private val logger = LoggerFactory.getLogger(getClass().getName())
-  
+
   private val MAC_LENGTH = 20 // HMAC-SHA1
   private val _buffer = new SSHBuffer()
   private var _packetLength: Int = _
@@ -168,8 +181,8 @@ class SSHEncryptedStreamBufferReader(in: InputStream) extends StreamBufferReader
 
 class SSHStreamBufferReader(in: InputStream) extends StreamBufferReader(in) {
   private val _buffer = new SSHBuffer()
-  private val _packetLength = readInt(in)
-  private val data = readByteArray(in, packetLength)
+  private val _packetLength = readPacketLength(in)
+  private val data = readPacketData(in, packetLength)
 
   _buffer.putByteArray(data)
 

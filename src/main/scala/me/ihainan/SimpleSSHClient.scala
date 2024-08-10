@@ -27,15 +27,10 @@ class SimpleSSHClient(
   private var serverAlgorithms: KeyExchangePacket = _
 
   def write(bytes: Array[Byte]): Unit = {
+    logger.info("Format({}): {}", bytes.length, SSHFormatter.formatByteArray(bytes))
+    logger.info("Base64({}): {}", bytes.length, SSHFormatter.encodeToBase64(bytes))
     out.write(bytes)
     out.flush()
-  }
-
-  def createConnection(): Unit = {
-    socket = new Socket(host, port)
-    in = socket.getInputStream()
-    out = socket.getOutputStream()
-    logger.info("Connected to the server {}:{}", host, port)
   }
 
   def start(): Unit = {
@@ -93,12 +88,24 @@ class SimpleSSHClient(
     }
   }
 
-  def sendClientVersion(): Unit = {
+  private def createConnection(): Unit = {
+    socket = new Socket(host, port)
+    in = socket.getInputStream()
+    out = socket.getOutputStream()
+    logger.info("Connected to the server {}:{}", host, port)
+  }
+
+  private def closeConnection(): Unit = {
+    logger.info("Closing connection...")
+    write(DisconnectPacket.generateDisconnectPacket().getData)
+  }
+
+  private def sendClientVersion(): Unit = {
     logger.info(s"Sending SSH version to the server...")
     write(HelloPacket.generateVersionPacket().getData)
   }
 
-  def receiveServerVersion(): Unit = {
+  private def receiveServerVersion(): Unit = {
     logger.info(s"Receving SSH version from the server...")
     HelloPacket.receiveServerVersionPacket(in)
   }
@@ -106,7 +113,9 @@ class SimpleSSHClient(
   private def sendClientAlgorithms(): Unit = {
     logger.info("SSH_MSG_KEXINIT(client -> server)...")
     logger.debug("Client's algorithms: \n{}", clientAlrithms.toString(): Any)
-    write(clientAlrithms.generatePacket().getData)
+    val buffer = clientAlrithms.generatePacket()
+    // logger.info("hexOrHighligthRangeStr: {}", buffer.hexOrHighligthRangeStr())
+    write(buffer.getData)
   }
 
   private def receiveServerAlgorithms(): Unit = {
@@ -160,11 +169,6 @@ class SimpleSSHClient(
   private def receivePasswordAuthenticationResponse(): Unit = {
     logger.info("Receving auth response...")
     AuthPacket.readPasswordAuthenticationResponse(in)
-  }
-
-  private def closeConnection(): Unit = {
-    logger.info("Closing connection...")
-    write(DisconnectPacket.generateDisconnectPacket().getData)
   }
 }
 

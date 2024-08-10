@@ -1,6 +1,7 @@
 package me.ihainan.utils
 
 import org.apache.commons.codec.binary.Hex
+import java.util.Base64
 
 object SSHFormatter {
   def formatByteArray(bytes: Array[Byte]): String = {
@@ -18,5 +19,9 @@ object SSHFormatter {
       }
     }
     sb.toString.trim()
+  }
+
+  def encodeToBase64(bytes: Array[Byte]): String = {
+    Base64.getEncoder().encodeToString(bytes)
   }
 }
