@@ -6,7 +6,6 @@ import java.nio.ByteBuffer
 import me.ihainan.utils.SSHBuffer
 import me.ihainan.utils.SSHStreamBufferReader
 import me.ihainan.utils.SSHBufferReader
-import com.ibm.j9ddr.vm29.pointer.generated.messagePointer
 import java.math.BigInteger
 import me.ihainan.SSHSession
 import me.ihainan.algorithms.RSAAlgorithm
