@@ -134,12 +134,12 @@ class SimpleSSHClient(
 
   private def sendNewKey(): Unit = {
     logger.info("Sending NEW_KEY packet...")
-    write(NewKeyPacket.generatePacket())
+    write(NewKeysPacket.generatePacket())
   }
 
   private def receiveNewKey(): Unit = {
     logger.info("Receving NEW_KEY...")
-    NewKeyPacket.readNewKeyFromInputStream(in)
+    NewKeysPacket.readNewKeysFromInputStream(in)
   }
 
   private def receiveExtInfo(): Unit = {

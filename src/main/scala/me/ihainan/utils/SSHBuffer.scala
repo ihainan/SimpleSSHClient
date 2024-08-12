@@ -176,7 +176,6 @@ class SSHEncryptedStreamBufferReader(in: InputStream) extends StreamBufferReader
     _buffer.putByte(paddingLength)
     _buffer.putByteArray(decryptedData)
   }
-
 }
 
 class SSHStreamBufferReader(in: InputStream) extends StreamBufferReader(in) {
